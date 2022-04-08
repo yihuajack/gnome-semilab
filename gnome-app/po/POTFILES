@@ -1,0 +1,7 @@
+data/com.github.yihuajack.SemiLab.desktop.in
+data/com.github.yihuajack.SemiLab.appdata.xml.in
+data/com.github.yihuajack.SemiLab.gschema.xml
+src/semi_lab-window.ui
+src/main.c
+src/semi_lab-window.c
+
