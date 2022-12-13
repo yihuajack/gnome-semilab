@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-semilab">
+	<schema id="com.github.yihuajack.GnomeSemiLab" path="/com/github/yihuajack/GnomeSemiLab/">
+	</schema>
+</schemalist>

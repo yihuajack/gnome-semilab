@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GspCreateProjectWidget" parent="GtkWidget">
+    <child>
+      <object class="AdwPreferencesPage" id="main">
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Simulation</property>
+            <property name="description" translatable="yes">Choose the simulation you want to run.</property>
+            <child>
+              <object class="AdwPreferenceRow" id="simulation_row">
+                <property name="title">Shockley-Queisser Limit</property>
+                <property name="selectable">true</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

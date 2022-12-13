@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=semi-lab
-Exec=semi-lab
-Icon=com.github.yihuajack.SemiLab
-Terminal=false
-Type=Application
-Categories=GTK;
-StartupNotify=true

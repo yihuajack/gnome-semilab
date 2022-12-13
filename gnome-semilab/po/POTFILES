@@ -1,0 +1,6 @@
+data/com.github.yihuajack.GnomeSemiLab.desktop.in
+data/com.github.yihuajack.GnomeSemiLab.appdata.xml.in
+data/com.github.yihuajack.GnomeSemiLab.gschema.xml
+src/main.c
+src/gnome-semilab-window.c
+src/gnome-semilab-window.ui

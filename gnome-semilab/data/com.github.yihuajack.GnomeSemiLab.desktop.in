@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=gnome-semilab
+Exec=gnome-semilab
+Icon=com.github.yihuajack.GnomeSemiLab
+Terminal=false
+Type=Application
+Categories=GTK;
+StartupNotify=true
