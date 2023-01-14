@@ -1,7 +1,7 @@
 {
     "app-id" : "com.github.yihuajack.GnomeSemiLab",
-    "runtime" : "org.gnome.Platform",
-    "runtime-version" : "43",
+    "runtime" : "org.freedesktop.Platform.openh264",
+    "runtime-version" : "2.0",
     "sdk" : "org.gnome.Sdk",
     "command" : "gnome-semilab",
     "finish-args" : [

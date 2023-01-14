@@ -14,6 +14,7 @@
             <child type="start">
               <object class="GtkButton" id="back_button">
                 <property name="action-name">greeter.page</property>
+                <property name="action-target">'overview'</property>
                 <property name="icon-name">go-previous-symbolic</property>
                 <property name="has-tooltip">true</property>
                 <property name="tooltip-text" translatable="yes">Go back</property>
@@ -78,6 +79,7 @@
                 <property name="transition-type">crossfade</property>
                 <property name="hhomogeneous">false</property>
                 <property name="vhomogeneous">false</property>
+                <signal name="notify::visible-child" handler="stack_notify_visible_child_cb" object="GnomeSemilabWindow" swapped="true"/>
                 <child>
                   <object class="GtkStackPage" id="project_stack_page">
                     <property name="name">overview</property>
@@ -85,37 +87,66 @@
                     <property name="child">
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
+                        <property name="vexpand">true</property>
+                        <property name="valign">GTK_ALIGN_FILL</property>
                         <child>
                           <object class="GtkLabel" id="greeting_label">
                             <property name="label">Welcome to SemiLab</property>
-                            <property name="vexpand">false</property>
+                            <property name="margin-top">100</property>
+                            <property name="margin-bottom">100</property>
                             <style>
                               <class name="title-1"/>
                             </style>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkCenterBox">
+                          <object class="GtkBox">
                             <property name="orientation">horizontal</property>
-                            <child type="start">
-                              <object class="GtkButton" id="new_proj_button">
-                                <property name="action-name">app.new-simulation</property>
-                                <property name="icon-name">plus-large-symbolic</property>
-                                <property name="tooltip-text" translatable="yes">New Simulation</property>
-                                <!--<property name="use-underline">true</property>-->
-                                <property name="width-request">100</property>
-                                <style>
-                                  <class name="suggested-action"></class>
-                                </style>
+                            <property name="hexpand">true</property>
+                            <property name="halign">GTK_ALIGN_CENTER</property>
+                            <property name="spacing">200</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">12</property>
+                                <child>
+                                  <object class="GtkButton" id="new_proj_button">
+                                    <property name="action-name">greeter.page</property>
+                                    <property name="action-target">'new-simulation'</property>
+                                    <property name="icon-name">plus-large-symbolic</property>
+                                    <property name="tooltip-text" translatable="yes">New Simulation</property>
+                                    <property name="width-request">100</property>
+                                    <property name="height-request">100</property>
+                                    <style>
+                                      <class name="suggested-action"></class>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="new_proj_label">
+                                    <property name="label">New Simulation</property>
+                                  </object>
+                                </child>
                               </object>
                             </child>
-                            <child type="end">
-                              <object class="GtkButton" id="open_proj_button">
-                                <property name="action-name">app.open-simulation</property>
-                                <property name="icon-name">arrow-into-box-symbolic</property>
-                                <property name="tooltip-text" translatable="yes">Open Simulation</property>
-                                <!--<property name="use-underline">true</property>-->
-                                <property name="width-request">100</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">12</property>
+                                <child>
+                                  <object class="GtkButton" id="open_proj_button">
+                                    <property name="action-name">app.open-simulation</property>
+                                    <property name="icon-name">arrow-into-box-symbolic</property>
+                                    <property name="tooltip-text" translatable="yes">Open Simulation</property>
+                                    <property name="width-request">100</property>
+                                    <property name="height-request">100</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="open_proj_label">
+                                    <property name="label">Open Simulation</property>
+                                  </object>
+                                </child>
                               </object>
                             </child>
                           </object>

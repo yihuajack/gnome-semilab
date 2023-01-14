@@ -28,4 +28,24 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (GnomeSemilabWindow, gnome_semilab_window, GNOME_SEMILAB, WINDOW, AdwApplicationWindow)
 
+extern
+GtkWidget   *gnome_semilab_window_get_page      (GnomeSemilabWindow *self);
+
+extern
+void         gnome_semilab_window_set_page      (GnomeSemilabWindow *self,
+                                                 GtkWidget          *page);
+
+extern
+const gchar *gnome_semilab_window_get_page_name (GnomeSemilabWindow *self);
+
+extern
+void         gnome_semilab_window_set_page_name (GnomeSemilabWindow *self,
+                                                 const gchar        *name);
+
+extern
+void         gnome_semilab_window_add_page      (GnomeSemilabWindow *self,
+                                                 GtkWidget          *widget,
+                                                 const gchar        *name,
+                                                 const gchar        *title);
+
 G_END_DECLS
