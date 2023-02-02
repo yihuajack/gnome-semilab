@@ -22,16 +22,39 @@
 
 #include "config.h"
 
+// #include "gnome-semilab-window.h"
 #include "gsp-create-project-widget.h"
 
 struct _GspCreateProjectWidget
 {
-  GtkWidget     *parent_instance;
+  GtkWidget      parent_instance;
 
   GtkWidget     *main;
-}
+};
 
 G_DEFINE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GTK_TYPE_WIDGET)
+
+static void
+expand_action (GtkWidget   *widget,
+               const gchar *action_name,
+               GVariant    *param)
+{
+  GspCreateProjectWidget *self = (GspCreateProjectWidget *)widget;
+
+  g_assert (GSP_IS_CREATE_PROJECT_WIDGET (self));
+
+  gtk_widget_action_set_enabled (widget, "create-project.expand", FALSE);
+}
+
+static void
+gsp_create_project_widget_class_init (GspCreateProjectWidgetClass *klass)
+{
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
+
+  gtk_widget_class_set_template_from_resource (widget_class, "gsp-create-project-widget.ui");
+
+  gtk_widget_class_install_action (widget_class, "create-project.expand", NULL, expand_action);
+}
 
 static void
 gsp_create_project_widget_init (GspCreateProjectWidget *self)
