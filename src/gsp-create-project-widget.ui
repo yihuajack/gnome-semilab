@@ -8,7 +8,7 @@
             <property name="title" translatable="yes">Simulation</property>
             <property name="description" translatable="yes">Choose the simulation you want to run.</property>
             <child>
-              <object class="AdwPreferenceRow" id="simulation_row">
+              <object class="AdwPreferencesRow" id="simulation_row">
                 <property name="title">Shockley-Queisser Limit</property>
                 <property name="selectable">true</property>
               </object>
@@ -16,9 +16,9 @@
           </object>
         </child>
         <child>
-          <object class="AdwPreferenceGroup">
+          <object class="AdwPreferencesGroup">
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="expand_button">
                 <property name="action-name">create-project.expand</property>
                 <property name="label" translatable="yes">Create Project</property>
                 <property name="margin-top">12</property>

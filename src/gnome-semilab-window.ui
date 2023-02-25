@@ -5,7 +5,9 @@
   <template class="GnomeSemilabWindow" parent="AdwApplicationWindow">
     <property name="default-width">1000</property>
     <property name="default-height">800</property>
-    <property name="title">SemiLab</property>
+    <child type="title">
+      <object class="AdwWindowTitle" id="title"/>
+    </child>
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>
@@ -83,7 +85,7 @@
                 <child>
                   <object class="GtkStackPage" id="project_stack_page">
                     <property name="name">overview</property>
-                    <property name="title" translatable="yes">Projects</property>
+                    <property name="title" translatable="yes">Project</property>
                     <property name="child">
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>

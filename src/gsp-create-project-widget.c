@@ -22,14 +22,15 @@
 
 #include "config.h"
 
-// #include "gnome-semilab-window.h"
 #include "gsp-create-project-widget.h"
 
 struct _GspCreateProjectWidget
 {
-  GtkWidget      parent_instance;
+  GtkWidget            parent_instance;
 
-  GtkWidget     *main;
+  /* Template widgets */
+  GtkWidget           *main;
+  GtkButton           *expand_button;
 };
 
 G_DEFINE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GTK_TYPE_WIDGET)
@@ -47,11 +48,27 @@ expand_action (GtkWidget   *widget,
 }
 
 static void
+gsp_create_project_widget_dispose (GObject *object)
+{
+  GspCreateProjectWidget *self = (GspCreateProjectWidget *)object;
+
+  // AdwPreferencesPage *main passing argument 1 of ‘gtk_widget_unparent’ from incompatible pointer type
+  g_clear_pointer (&self->main, gtk_widget_unparent);
+
+  G_OBJECT_CLASS (gsp_create_project_widget_parent_class)->dispose (object);
+}
+
+static void
 gsp_create_project_widget_class_init (GspCreateProjectWidgetClass *klass)
 {
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
-  gtk_widget_class_set_template_from_resource (widget_class, "gsp-create-project-widget.ui");
+  object_class->dispose = gsp_create_project_widget_dispose;
+
+  gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gsp-create-project-widget.ui");
+  gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, main);
+  gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, expand_button);
 
   gtk_widget_class_install_action (widget_class, "create-project.expand", NULL, expand_action);
 }

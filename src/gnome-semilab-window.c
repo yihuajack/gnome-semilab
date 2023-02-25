@@ -1,6 +1,6 @@
 /* gnome-semilab-window.c
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +21,21 @@
 #include "config.h"
 
 #include "gnome-semilab-window.h"
+#include "gsp-create-project-widget.h"
+#include "gnome-semilab-resources.h"
 #include <glib/gi18n.h>
 
 struct _GnomeSemilabWindow
 {
-  AdwApplicationWindow  parent_instance;
+  AdwApplicationWindow    parent_instance;
 
   /* Template widgets */
-  GtkButton           *back_button;
-  GtkButton           *new_proj_button;
-  GtkStackSidebar     *stack_sidebar;
-  GtkStack            *pages;
-  AdwWindowTitle      *title;
+  GtkButton              *back_button;
+  GtkButton              *new_proj_button;
+  GtkStackSidebar        *stack_sidebar;
+  GtkStack               *pages;
+  AdwWindowTitle         *title;
+  GspCreateProjectWidget *create_project_page;
 };
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWindow, gnome_semilab_window, ADW_TYPE_APPLICATION_WINDOW)
@@ -126,8 +129,8 @@ gnome_semilab_window_page_action (GtkWidget   *widget,
 void
 gnome_semilab_window_add_page (GnomeSemilabWindow *self,
                                GtkWidget          *page,
-                               const char         *name,
-                               const char         *title)
+                               const gchar        *name,
+                               const gchar        *title)
 {
   GtkStackPage *child;
 
@@ -138,29 +141,78 @@ gnome_semilab_window_add_page (GnomeSemilabWindow *self,
   gtk_stack_page_set_title (child, title);
 }
 
+void
+gnome_semilab_window_remove_page (GnomeSemilabWindow *self,
+                                  GtkWidget          *page)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
+  g_return_if_fail (GTK_IS_WIDGET (page));
+
+  gtk_stack_remove (self->pages, page);
+}
+
+static void
+gnome_semilab_window_constructed (GObject *object)
+{
+  GnomeSemilabWindow *self = (GnomeSemilabWindow *)object;
+
+  G_OBJECT_CLASS (gnome_semilab_window_parent_class)->constructed (object);
+
+  /* To manually set the action target of new_proj_button:
+   * gtk_actionable_set_action_target (GTK_ACTIONABLE (self->new_proj_button), "s", "new-simulation");
+   * To manually add page, assertion 'GTK_IS_WIDGET (page)' failed */
+  self->create_project_page = g_object_new (GSP_TYPE_CREATE_PROJECT_WIDGET, NULL);
+  gnome_semilab_window_add_page (GNOME_SEMILAB_WINDOW (self), GTK_WIDGET (self->create_project_page), "new-simulation", _("New Simulation"));
+}
+
+static void
+gnome_semilab_window_dispose (GObject *object)
+{
+  /* instance of invalid non-instantiatable type '(null)'
+   * g_signal_handlers_disconnect_matched: assertion 'G_TYPE_CHECK_INSTANCE (instance)' failed
+   * GnomeSemilabWindow *self = (GnomeSemilabWindow *)object;
+   * gnome_semilab_window_remove_page (GNOME_SEMILAB_WINDOW (self), GTK_WIDGET (self->create_project_page));
+   * self->create_project_page = NULL;
+   * */
+
+  // Template widgets do not need g_clear_object()
+
+  // Finalizing GnomeSemilabWindow, but it still has children left: AdwGizmo
+  G_OBJECT_CLASS (gnome_semilab_window_parent_class)->dispose (object);
+}
+
 static void
 gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
 {
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
+
+  object_class->constructed = gnome_semilab_window_constructed;
+  object_class->dispose = gnome_semilab_window_dispose;
 
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gnome-semilab-window.ui");
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, back_button);
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, new_proj_button);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, stack_sidebar);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, pages);
-  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, new_proj_button);
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, title);
   gtk_widget_class_bind_template_callback (widget_class, stack_notify_visible_child_cb);
 
   gtk_widget_class_install_action (widget_class, "greeter.page", "s", gnome_semilab_window_page_action);
 
   gtk_widget_class_add_binding_action (widget_class, GDK_KEY_W, GDK_CONTROL_MASK, "window.close", NULL);
+
+  g_type_ensure (GSP_TYPE_CREATE_PROJECT_WIDGET);
+
+  g_resources_register (gnome_semilab_get_resource ());
 }
 
 static void
 gnome_semilab_window_init (GnomeSemilabWindow *self)
 {
+  gsp_create_project_widget_get_type ();
   gtk_widget_init_template (GTK_WIDGET (self));
   gtk_stack_sidebar_set_stack (self->stack_sidebar, self->pages);
   stack_notify_visible_child_cb (self, NULL, self->pages);
-  g_signal_connect (self->new_proj_button, "clicked", G_CALLBACK (gnome_semilab_window_add_page), NULL);
 }
 

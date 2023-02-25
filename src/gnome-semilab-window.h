@@ -48,4 +48,8 @@ void         gnome_semilab_window_add_page      (GnomeSemilabWindow *self,
                                                  const gchar        *name,
                                                  const gchar        *title);
 
+extern
+void         gnome_semilab_window_remove_page   (GnomeSemilabWindow *self,
+                                                 GtkWidget          *widget);
+
 G_END_DECLS
