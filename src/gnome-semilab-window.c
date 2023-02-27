@@ -36,6 +36,7 @@ struct _GnomeSemilabWindow
   GtkStack               *pages;
   AdwWindowTitle         *title;
   GspCreateProjectWidget *create_project_page;
+  AdwFlap                *content_flap;
 };
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWindow, gnome_semilab_window, ADW_TYPE_APPLICATION_WINDOW)
@@ -173,6 +174,7 @@ gnome_semilab_window_dispose (GObject *object)
    * GnomeSemilabWindow *self = (GnomeSemilabWindow *)object;
    * gnome_semilab_window_remove_page (GNOME_SEMILAB_WINDOW (self), GTK_WIDGET (self->create_project_page));
    * self->create_project_page = NULL;
+   * https://mail.gnome.org/archives/gtk-app-devel-list/2007-May/msg00163.html
    * */
 
   // Template widgets do not need g_clear_object()
@@ -196,6 +198,7 @@ gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, stack_sidebar);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, pages);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, title);
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, content_flap);
   gtk_widget_class_bind_template_callback (widget_class, stack_notify_visible_child_cb);
 
   gtk_widget_class_install_action (widget_class, "greeter.page", "s", gnome_semilab_window_page_action);

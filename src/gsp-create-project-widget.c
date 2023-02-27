@@ -29,8 +29,9 @@ struct _GspCreateProjectWidget
   GtkWidget            parent_instance;
 
   /* Template widgets */
-  GtkWidget           *main;
+  GtkWidget           *main_page;
   GtkButton           *expand_button;
+  AdwPreferencesRow   *simulation_row;
 };
 
 G_DEFINE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GTK_TYPE_WIDGET)
@@ -53,7 +54,7 @@ gsp_create_project_widget_dispose (GObject *object)
   GspCreateProjectWidget *self = (GspCreateProjectWidget *)object;
 
   // AdwPreferencesPage *main passing argument 1 of ‘gtk_widget_unparent’ from incompatible pointer type
-  g_clear_pointer (&self->main, gtk_widget_unparent);
+  g_clear_pointer (&self->main_page, gtk_widget_unparent);
 
   G_OBJECT_CLASS (gsp_create_project_widget_parent_class)->dispose (object);
 }
@@ -67,10 +68,14 @@ gsp_create_project_widget_class_init (GspCreateProjectWidgetClass *klass)
   object_class->dispose = gsp_create_project_widget_dispose;
 
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gsp-create-project-widget.ui");
-  gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, main);
+  gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, main_page);
   gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, expand_button);
+  gtk_widget_class_bind_template_child (widget_class, GspCreateProjectWidget, simulation_row);
 
   gtk_widget_class_install_action (widget_class, "create-project.expand", NULL, expand_action);
+
+  // Trying to snapshot AdwPreferencesPage without a current allocation
+  gtk_widget_class_set_layout_manager_type (widget_class, GTK_TYPE_BIN_LAYOUT);
 }
 
 static void
