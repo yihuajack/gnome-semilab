@@ -1,6 +1,6 @@
-/* gsp-create-project-widget.h
+/* gnome-semilab-workspace.c
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,18 +18,28 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
-
-#include <adwaita.h>
+#define G_LOG_DOMAIN "gnome-semilab-workspace"
 
 #include "gnome-semilab-workspace.h"
-#include "gnome-semilab-global.h"
 
-G_BEGIN_DECLS
+struct _GnomeSemilabworkspace
+{
+  GtkWindowGroup   parent_instance;
+}
 
-#define GSP_TYPE_CREATE_PROJECT_WIDGET (gsp_create_project_widget_get_type())
+G_DEFINE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, ADW_TYPE_APPLICATION_WINDOW)
 
-G_DECLARE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GSP, CREATE_PROJECT_WIDGET, GtkWidget)
+static void
+gnome_semilab_workspace_class_init (GnomeSemilabWorkspace *klass)
+{
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
-G_END_DECLS
+  gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemilab/gnome-semilab-workspace.ui");
+}
+
+static void
+gnome_semilab_workspace_init (GnomeSemilabWorkspace *se;f)
+{
+  gtk_widget_init_template (GTK_WIDGET (self));
+}
 

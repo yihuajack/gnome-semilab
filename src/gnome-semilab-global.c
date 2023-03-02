@@ -1,6 +1,6 @@
-/* gsp-create-project-widget.h
+/* gnome-semilab-global.h
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,18 +18,28 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
+#define G_LOG_DOMAIN "gnome-semilab-global"
 
-#include <adwaita.h>
-
-#include "gnome-semilab-workspace.h"
 #include "gnome-semilab-global.h"
 
-G_BEGIN_DECLS
+GnomeSemilabWorkspace *
+gnome_semilab_widget_get_workspace (GtkWidget *widget)
+{
+  GtkWindow *transient_for;
+  GtkRoot *root;
 
-#define GSP_TYPE_CREATE_PROJECT_WIDGET (gsp_create_project_widget_get_type())
+  g_return_val_if_fail (GTK_IS_WIDGET (widget), NULL);
 
-G_DECLARE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GSP, CREATE_PROJECT_WIDGET, GtkWidget)
+  if (GTK_IS_ROOT (widget))
+    root = GTK_ROOT (widget);
+  else
+    root = gtk_widget_get_root (widget);
 
-G_END_DECLS
+  transient_for = gtk_window_get_transient_for (GTK_WINDOW (root));
+  if (root && !GNOME_SEMILAB_IS_WORKSPACE (root) && GTK_IS_WINDOW (root) && transient_for)
+    return gnome_semilab_widget_get_workspace (GTK_WIDGET (transient_for));
+
+  return GNOME_SEMILAB_IS_WORKSPACE (root) ? GNOME_SEMILAB_WORKSPACE (root) : NULL;
+}
+
 

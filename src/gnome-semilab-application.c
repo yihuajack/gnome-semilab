@@ -1,6 +1,6 @@
 /* gnome-semilab-application.c
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ gnome_semilab_application_about_action (GSimpleAction *action,
                          "developer-name", "Yihua Liu",
                          "version", "0.1.0",
                          "developers", developers,
-                         "copyright", "© 2022 Yihua Liu",
+                         "copyright", "© 2022-2023 Yihua Liu",
                          NULL);
 }
 
@@ -116,5 +116,18 @@ gnome_semilab_application_init (GnomeSemilabApplication *self)
   gtk_application_set_accels_for_action (GTK_APPLICATION (self),
                                          "app.quit",
                                          (const char *[]) { "<primary>q", NULL });
+}
+
+GnomeSemilabWorkspace *
+gnome_semilab_application_find_project_workspace (GnomeSemilabApplication *self,
+                                                  const gchar             *sim_type)
+{
+  g_return_val_if_fail (GNOME_SEMILAB_IS_APPLICATION (self), NULL);
+  GnomeSemilabWorkspace *workspace;
+  if (!strcmp(sim_type, "sqlimit"))
+    {
+      return workspace;
+    }
+  return NULL;
 }
 

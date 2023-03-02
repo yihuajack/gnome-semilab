@@ -3,6 +3,8 @@ gnome_semilab_sources = [
   'gnome-semilab-application.c',
   'gnome-semilab-window.c',
   'gsp-create-project-widget.c',
+  'gnome-semilab-global.c',
+  'gnome-semilab-workspace.c',
 ]
 
 gnome_semilab_deps = [

@@ -1,6 +1,6 @@
-/* gsp-create-project-widget.h
+/* gnome-semilab-global.h
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,13 @@
 
 #pragma once
 
-#include <adwaita.h>
-
 #include "gnome-semilab-workspace.h"
-#include "gnome-semilab-global.h"
 
 G_BEGIN_DECLS
 
-#define GSP_TYPE_CREATE_PROJECT_WIDGET (gsp_create_project_widget_get_type())
-
-G_DECLARE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GSP, CREATE_PROJECT_WIDGET, GtkWidget)
+extern
+GnomeSemilabWorkspace *gnome_semilab_widget_get_workspace (GtkWidget *widget);
 
 G_END_DECLS
+
 

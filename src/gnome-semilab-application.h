@@ -22,6 +22,8 @@
 
 #include <adwaita.h>
 
+#include "gnome-semilab-workspace.h"
+
 G_BEGIN_DECLS
 
 #define GNOME_SEMILAB_TYPE_APPLICATION (gnome_semilab_application_get_type())

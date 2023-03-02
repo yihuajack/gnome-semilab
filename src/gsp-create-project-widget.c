@@ -1,6 +1,6 @@
 /* gsp-create-project-widget.c
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,15 +37,27 @@ struct _GspCreateProjectWidget
 G_DEFINE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GTK_TYPE_WIDGET)
 
 static void
+gsp_create_project_widget_expand_cb (GtkButton *button,
+                                     GtkWindow *window)
+{
+  gtk_window_destroy (window);
+}
+
+static void
 expand_action (GtkWidget   *widget,
                const gchar *action_name,
                GVariant    *param)
 {
   GspCreateProjectWidget *self = (GspCreateProjectWidget *)widget;
+  GnomeSemilabWorkspace *greeter;
 
   g_assert (GSP_IS_CREATE_PROJECT_WIDGET (self));
 
+  greeter = GNOME_SEMILAB_WORKSPACE (gnome_semilab_widget_get_workspace (widget));
+
   gtk_widget_action_set_enabled (widget, "create-project.expand", FALSE);
+
+  gnome_semilab_window_open_project ();
 }
 
 static void

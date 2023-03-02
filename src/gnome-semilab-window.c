@@ -152,6 +152,17 @@ gnome_semilab_window_remove_page (GnomeSemilabWindow *self,
   gtk_stack_remove (self->pages, page);
 }
 
+void
+gnome_semilab_window_open_project (GnomeSemilabWindow *self,
+                                   const gchar        *name,
+                                   GVariant           *param)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
+
+  gtk_window_present (GTK_WINDOW (gnome_semilab_workspace));
+  gtk_window_destroy (GTK_WINDOW (self));
+}
+
 static void
 gnome_semilab_window_constructed (GObject *object)
 {
@@ -202,6 +213,7 @@ gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
   gtk_widget_class_bind_template_callback (widget_class, stack_notify_visible_child_cb);
 
   gtk_widget_class_install_action (widget_class, "greeter.page", "s", gnome_semilab_window_page_action);
+  gtk_widget_class_install_action (widget_class, "create-sqlimit", "s", gnome_semilab_window_open_project);
 
   gtk_widget_class_add_binding_action (widget_class, GDK_KEY_W, GDK_CONTROL_MASK, "window.close", NULL);
 
@@ -218,4 +230,5 @@ gnome_semilab_window_init (GnomeSemilabWindow *self)
   gtk_stack_sidebar_set_stack (self->stack_sidebar, self->pages);
   stack_notify_visible_child_cb (self, NULL, self->pages);
 }
+
 
