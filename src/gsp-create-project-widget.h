@@ -1,6 +1,6 @@
 /* gsp-create-project-widget.h
  *
- * Copyright 2022 Yihua Liu
+ * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,6 @@
 #pragma once
 
 #include <adwaita.h>
-
-#include "gnome-semilab-workspace.h"
-#include "gnome-semilab-global.h"
 
 G_BEGIN_DECLS
 

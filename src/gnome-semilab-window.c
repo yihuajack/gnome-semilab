@@ -20,7 +20,9 @@
 
 #include "config.h"
 
+#include "gnome-semilab-global.h"
 #include "gnome-semilab-window.h"
+#include "gnome-semilab-application.h"
 #include "gsp-create-project-widget.h"
 #include "gnome-semilab-resources.h"
 #include <glib/gi18n.h>
@@ -158,8 +160,9 @@ gnome_semilab_window_open_project (GnomeSemilabWindow *self,
                                    GVariant           *param)
 {
   g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
+  GnomeSemilabWorkspace *workspace;
 
-  gtk_window_present (GTK_WINDOW (gnome_semilab_workspace));
+  gtk_window_present (GTK_WINDOW (workspace));
   gtk_window_destroy (GTK_WINDOW (self));
 }
 

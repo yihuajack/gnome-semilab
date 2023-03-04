@@ -22,6 +22,7 @@
 
 #include "gnome-semilab-application.h"
 #include "gnome-semilab-window.h"
+#include "gnome-semilab-workspace.h"
 
 struct _GnomeSemilabApplication
 {
@@ -101,9 +102,25 @@ gnome_semilab_application_quit_action (GSimpleAction *action,
   g_application_quit (G_APPLICATION (self));
 }
 
+void
+gnome_semilab_application_load_project (GSimpleAction *action,
+                                        GVariant      *parameter,
+                                        gpointer       user_data)
+{
+  GnomeSemilabApplication *self = user_data;
+  g_autoptr(GnomeSemilabWorkspace) workspace = NULL;
+
+  g_assert (!action || G_IS_SIMPLE_ACTION (action));
+  g_assert (!parameter || g_variant_is_of_type (parameter, G_VARIANT_TYPE_STRING));
+  g_assert (GNOME_SEMILAB_IS_APPLICATION (self));
+
+  workspace = gnome_semilab_workspace_new (self);
+}
+
 static const GActionEntry app_actions[] = {
   { "quit", gnome_semilab_application_quit_action },
   { "about", gnome_semilab_application_about_action },
+  { "load-project", gnome_semilab_application_load_project, "s" },
 };
 
 static void
@@ -116,18 +133,5 @@ gnome_semilab_application_init (GnomeSemilabApplication *self)
   gtk_application_set_accels_for_action (GTK_APPLICATION (self),
                                          "app.quit",
                                          (const char *[]) { "<primary>q", NULL });
-}
-
-GnomeSemilabWorkspace *
-gnome_semilab_application_find_project_workspace (GnomeSemilabApplication *self,
-                                                  const gchar             *sim_type)
-{
-  g_return_val_if_fail (GNOME_SEMILAB_IS_APPLICATION (self), NULL);
-  GnomeSemilabWorkspace *workspace;
-  if (!strcmp(sim_type, "sqlimit"))
-    {
-      return workspace;
-    }
-  return NULL;
 }
 

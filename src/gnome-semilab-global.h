@@ -21,6 +21,7 @@
 #pragma once
 
 #include "gnome-semilab-workspace.h"
+#include "gnome-semilab-application.h"
 
 G_BEGIN_DECLS
 

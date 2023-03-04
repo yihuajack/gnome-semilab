@@ -22,6 +22,7 @@
 
 #include "config.h"
 
+#include "gnome-semilab-global.h"
 #include "gsp-create-project-widget.h"
 
 struct _GspCreateProjectWidget

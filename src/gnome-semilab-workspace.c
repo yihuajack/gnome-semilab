@@ -21,6 +21,7 @@
 #define G_LOG_DOMAIN "gnome-semilab-workspace"
 
 #include "gnome-semilab-workspace.h"
+#include "gnome-semilab-application.h"
 
 struct _GnomeSemilabworkspace
 {
@@ -28,6 +29,13 @@ struct _GnomeSemilabworkspace
 }
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, ADW_TYPE_APPLICATION_WINDOW)
+
+GnomeSemilabWorkspace *
+gnome_semilab_workspace_new (GnomeSemilabApplication *app)
+{
+  return g_object_new (GNOME_SEMILAB_TYPE_WORKSPACE,
+                       "application", app);
+}
 
 static void
 gnome_semilab_workspace_class_init (GnomeSemilabWorkspace *klass)
@@ -38,7 +46,7 @@ gnome_semilab_workspace_class_init (GnomeSemilabWorkspace *klass)
 }
 
 static void
-gnome_semilab_workspace_init (GnomeSemilabWorkspace *se;f)
+gnome_semilab_workspace_init (GnomeSemilabWorkspace *self)
 {
   gtk_widget_init_template (GTK_WIDGET (self));
 }

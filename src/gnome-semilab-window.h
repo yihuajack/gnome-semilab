@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include <adwaita.h>"
+#include <adwaita.h>
 
 G_BEGIN_DECLS
 

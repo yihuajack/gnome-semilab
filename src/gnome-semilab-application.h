@@ -22,15 +22,20 @@
 
 #include <adwaita.h>
 
-#include "gnome-semilab-workspace.h"
-
 G_BEGIN_DECLS
 
 #define GNOME_SEMILAB_TYPE_APPLICATION (gnome_semilab_application_get_type())
+#define GNOME_SEMILAB_APPLICATION_DEFAULT GNOME_SEMILAB_APPLICATION(g_application_get_default())
 
 G_DECLARE_FINAL_TYPE (GnomeSemilabApplication, gnome_semilab_application, GNOME_SEMILAB, APPLICATION, AdwApplication)
 
-GnomeSemilabApplication *gnome_semilab_application_new (const char        *application_id,
-                                                        GApplicationFlags  flags);
+GnomeSemilabApplication *gnome_semilab_application_new          (const char        *application_id,
+                                                                 GApplicationFlags  flags);
+
+extern
+void                     gnome_semilab_application_open_project (GSimpleAction     *action,
+                                                                 GVariant          *parameter,
+                                                                 gpointer           user_data);
 
 G_END_DECLS
+
