@@ -23,6 +23,7 @@
 #include "config.h"
 
 #include "gnome-semilab-global.h"
+#include "gnome-semilab-window.h"
 #include "gsp-create-project-widget.h"
 
 struct _GspCreateProjectWidget
@@ -50,15 +51,15 @@ expand_action (GtkWidget   *widget,
                GVariant    *param)
 {
   GspCreateProjectWidget *self = (GspCreateProjectWidget *)widget;
-  GnomeSemilabWorkspace *greeter;
+  GnomeSemilabWindow *greeter;
 
   g_assert (GSP_IS_CREATE_PROJECT_WIDGET (self));
 
-  greeter = GNOME_SEMILAB_WORKSPACE (gnome_semilab_widget_get_workspace (widget));
+  greeter = GNOME_SEMILAB_WINDOW (gnome_semilab_widget_get_workspace (widget));
 
   gtk_widget_action_set_enabled (widget, "create-project.expand", FALSE);
 
-  gnome_semilab_window_open_project ();
+  gnome_semilab_window_open_project (greeter, "sqlimit");
 }
 
 static void

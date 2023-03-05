@@ -42,4 +42,3 @@ gnome_semilab_widget_get_workspace (GtkWidget *widget)
   return GNOME_SEMILAB_IS_WORKSPACE (root) ? GNOME_SEMILAB_WORKSPACE (root) : NULL;
 }
 
-

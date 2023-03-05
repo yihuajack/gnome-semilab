@@ -25,10 +25,28 @@
 
 struct _GnomeSemilabworkspace
 {
-  GtkWindowGroup   parent_instance;
+  AdwApplicationWindow  parent_instance;
+
+  gchar                *ws_type;
 }
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, ADW_TYPE_APPLICATION_WINDOW)
+
+gchar *
+gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace *self)
+{
+  g_return_val_if_fail (GNOME_SEMILAB_IS_WORKSPACE (self), NULL);
+
+  return self->ws_type;
+}
+
+void
+gnome_semilab_workspace_activate (GnomeSemilabWorkspace *workspace)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_WORKSPACE (workspace));
+
+  gtk_window_present_with_time (GTK_WINDOW (workspace), g_get_monotonic_time () / 1000L);
+}
 
 GnomeSemilabWorkspace *
 gnome_semilab_workspace_new (GnomeSemilabApplication *app)

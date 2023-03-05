@@ -22,7 +22,7 @@
 
 #include "gnome-semilab-global.h"
 #include "gnome-semilab-window.h"
-#include "gnome-semilab-application.h"
+#include "gnome-semilab-workspace.h"
 #include "gsp-create-project-widget.h"
 #include "gnome-semilab-resources.h"
 #include <glib/gi18n.h>
@@ -156,14 +156,17 @@ gnome_semilab_window_remove_page (GnomeSemilabWindow *self,
 
 void
 gnome_semilab_window_open_project (GnomeSemilabWindow *self,
-                                   const gchar        *name,
-                                   GVariant           *param)
+                                   const gchar        *ws_type)
 {
-  g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
   GnomeSemilabWorkspace *workspace;
 
-  gtk_window_present (GTK_WINDOW (workspace));
-  gtk_window_destroy (GTK_WINDOW (self));
+  g_return_if_fail (GNOME_SEMILAB_IS_WORKSPACE (self));
+
+  if ((workspace = gnome_semilab_application_find_project (GNOME_SEMILAB_APPLICATION_DEFAULT, ws_type)))
+    {
+      gnome_semilab_workspace_activate (workspace);
+      gtk_window_destroy (GTK_WINDOW (self));
+    }
 }
 
 static void
@@ -216,7 +219,6 @@ gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
   gtk_widget_class_bind_template_callback (widget_class, stack_notify_visible_child_cb);
 
   gtk_widget_class_install_action (widget_class, "greeter.page", "s", gnome_semilab_window_page_action);
-  gtk_widget_class_install_action (widget_class, "create-sqlimit", "s", gnome_semilab_window_open_project);
 
   gtk_widget_class_add_binding_action (widget_class, GDK_KEY_W, GDK_CONTROL_MASK, "window.close", NULL);
 

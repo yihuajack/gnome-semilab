@@ -21,6 +21,7 @@
 #pragma once
 
 #include <adwaita.h>
+#include "gnome-semilab-workspace.h"
 
 G_BEGIN_DECLS
 
@@ -29,13 +30,24 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (GnomeSemilabApplication, gnome_semilab_application, GNOME_SEMILAB, APPLICATION, AdwApplication)
 
-GnomeSemilabApplication *gnome_semilab_application_new          (const char        *application_id,
-                                                                 GApplicationFlags  flags);
+extern
+void                     gnome_semilab_application_add_worksapce     (GnomeSemilabApplication *self,
+                                                                      GnomeSemilabWorkspace   *workspace);
 
 extern
-void                     gnome_semilab_application_open_project (GSimpleAction     *action,
-                                                                 GVariant          *parameter,
-                                                                 gpointer           user_data);
+void                     gnome_semilab_application_remove_worksapce  (GnomeSemilabApplication *self,
+                                                                      GnomeSemilabWorkspace   *workspace);
+
+extern
+void                     gnome_semilab_application_foreach_workspace (GnomeSemilabApplication *self,
+                                                                      GFunc                    callback,
+                                                                      gpointer                 user_data);
+extern
+GnomeSemilabWorkspace   *gnome_semilab_application_find_project      (GnomeSemilabApplication *self,
+                                                                      const gchar             *ws_type);
+
+GnomeSemilabApplication *gnome_semilab_application_new               (const char              *application_id,
+                                                                      GApplicationFlags        flags);
 
 G_END_DECLS
 

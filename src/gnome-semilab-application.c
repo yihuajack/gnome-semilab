@@ -22,14 +22,67 @@
 
 #include "gnome-semilab-application.h"
 #include "gnome-semilab-window.h"
-#include "gnome-semilab-workspace.h"
 
 struct _GnomeSemilabApplication
 {
-  AdwApplication parent_instance;
+  AdwApplication  parent_instance;
+
+  GPtrArray      *workspaces;
 };
 
 G_DEFINE_TYPE (GnomeSemilabApplication, gnome_semilab_application, ADW_TYPE_APPLICATION)
+
+void
+gnome_semilab_application_add_worksapce (GnomeSemilabApplication *self,
+                                         GnomeSemilabWorkspace   *workspace)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_APPLICATION (self));
+  g_return_if_fail (GNOME_SEMILAB_IS_WORKSPACE (workspace));
+
+  g_ptr_array_add (self->workspaces, g_object_ref (workspace));
+}
+
+void
+gnome_semilab_application_remove_workspace (GnomeSemilabApplication *self,
+                                            GnomeSemilabWorkspace   *workspace)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_APPLICATION (self));
+  g_return_if_fail (GNOME_SEMILAB_IS_WORKSPACE (workspace));
+
+  g_ptr_array_remove (self->workspaces, workspace);
+}
+
+void
+gnome_semilab_application_foreach_workspace (GnomeSemilabApplication *self,
+                                             GFunc                    callback,
+                                             gpointer                 user_data)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_APPLICATION (self));
+  g_return_if_fail (callback != NULL);
+
+  for (guint i = self->workspaces->len; i > 0; i--)
+    {
+      GnomeSemilabWorkspace *workspace = g_ptr_array_index (self->workspaces, i - 1);
+
+      callback (workspace, user_data);
+    }
+}
+
+GnomeSemilabWorkspace *
+gnome_semilab_application_find_project (GnomeSemilabApplication *self,
+                                         const gchar             *ws_type)
+{
+  g_return_val_if_fail (GNOME_SEMILAB_IS_APPLICATION (self), NULL);
+
+  for (guint i = 0; i < self->workspaces->len; i++)
+    {
+      GnomeSemilabWorkspace *workspace = g_ptr_array_index (self->workspaces, i);
+      const gchar *workspace_type = gnome_semilab_workspace_get_ws_type (workspace);
+
+      if (workspace_type != NULL && !g_strcmp0 (workspace_type, ws_type))
+        return workspace;
+    }
+}
 
 GnomeSemilabApplication *
 gnome_semilab_application_new (const char        *application_id,
@@ -57,6 +110,16 @@ gnome_semilab_application_activate (GApplication *app)
                            NULL);
 
   gtk_window_present (window);
+}
+
+static void
+gnome_semilab_application_dispose (GObject *object)
+{
+  GnomeSemilabApplication *self = (GnomeSemilabApplication *)object;
+
+  g_clear_pointer (&self->workspaces, g_ptr_array_unref);
+
+  G_OBJECT_CLASS (gnome_semilab_application_parent_class)->dispose (object);
 }
 
 static void
@@ -102,7 +165,7 @@ gnome_semilab_application_quit_action (GSimpleAction *action,
   g_application_quit (G_APPLICATION (self));
 }
 
-void
+static void
 gnome_semilab_application_load_project (GSimpleAction *action,
                                         GVariant      *parameter,
                                         gpointer       user_data)
@@ -126,6 +189,8 @@ static const GActionEntry app_actions[] = {
 static void
 gnome_semilab_application_init (GnomeSemilabApplication *self)
 {
+  self->workspaces = g_ptr_array_new_with_free_func (g_object_unref);
+
   g_action_map_add_action_entries (G_ACTION_MAP (self),
                                    app_actions,
                                    G_N_ELEMENTS (app_actions),

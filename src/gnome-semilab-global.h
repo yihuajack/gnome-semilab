@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "gnome-semilab-workspace.h"
 #include "gnome-semilab-application.h"
 
 G_BEGIN_DECLS
@@ -29,5 +28,4 @@ extern
 GnomeSemilabWorkspace *gnome_semilab_widget_get_workspace (GtkWidget *widget);
 
 G_END_DECLS
-
 
