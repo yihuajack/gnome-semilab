@@ -22,7 +22,6 @@
 
 #include "gnome-semilab-global.h"
 #include "gnome-semilab-window.h"
-#include "gnome-semilab-workspace.h"
 #include "gsp-create-project-widget.h"
 #include "gnome-semilab-resources.h"
 #include <glib/gi18n.h>

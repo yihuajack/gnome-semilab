@@ -21,24 +21,17 @@
 #define G_LOG_DOMAIN "gnome-semilab-workspace"
 
 #include "gnome-semilab-workspace.h"
-#include "gnome-semilab-application.h"
-
-struct _GnomeSemilabworkspace
-{
-  AdwApplicationWindow  parent_instance;
-
-  gchar                *ws_type;
-}
+#include "gnome-semilab-workspace-private.h"
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, ADW_TYPE_APPLICATION_WINDOW)
 
-gchar *
-gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace *self)
-{
-  g_return_val_if_fail (GNOME_SEMILAB_IS_WORKSPACE (self), NULL);
+enum {
+  PROP_0,
+  PROP_WS_TYPE,
+  N_PROPS
+};
 
-  return self->ws_type;
-}
+static GParamSpec *properties[N_PROPS];
 
 void
 gnome_semilab_workspace_activate (GnomeSemilabWorkspace *workspace)
@@ -49,16 +42,52 @@ gnome_semilab_workspace_activate (GnomeSemilabWorkspace *workspace)
 }
 
 GnomeSemilabWorkspace *
-gnome_semilab_workspace_new (GnomeSemilabApplication *app)
+gnome_semilab_workspace_new (AdwApplication *app)
 {
   return g_object_new (GNOME_SEMILAB_TYPE_WORKSPACE,
                        "application", app);
 }
 
 static void
-gnome_semilab_workspace_class_init (GnomeSemilabWorkspace *klass)
+gnome_semilab_workspace_get_property (GObject    *object,
+                                      guint       prop_id,
+                                      GValue     *value,
+                                      GParamSpec *pspec)
 {
+  GnomeSemilabWorkspace *self = GNOME_SEMILAB_WORKSPACE (object);
+
+  switch (prop_id)
+    {
+    case PROP_WS_TYPE:
+      g_value_set_string (value, gnome_semilab_workspace_get_ws_type (self));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    }
+}
+
+static void
+gnome_semilab_workspace_dispose (GObject *object)
+{
+  GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)object;
+
+  g_clear_pointer (&self->ws_type, g_free);
+
+  G_OBJECT_CLASS (gnome_semilab_workspace_parent_class)->dispose (object);
+}
+
+static void
+gnome_semilab_workspace_class_init (GnomeSemilabWorkspaceClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
+
+  object_class->dispose = gnome_semilab_workspace_dispose;
+  object_class->get_property = gnome_semilab_workspace_get_property;
+
+  properties[PROP_WS_TYPE] = g_param_spec_string ("ws-type", "Workspace Type", "Workspace Type", "sqlimit", (G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_properties (object_class, N_PROPS, properties);
 
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemilab/gnome-semilab-workspace.ui");
 }
@@ -66,6 +95,16 @@ gnome_semilab_workspace_class_init (GnomeSemilabWorkspace *klass)
 static void
 gnome_semilab_workspace_init (GnomeSemilabWorkspace *self)
 {
+  self->ws_type = g_strdup ("sqlimit");
+
   gtk_widget_init_template (GTK_WIDGET (self));
+}
+
+gchar *
+gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace *self)
+{
+  g_return_val_if_fail (GNOME_SEMILAB_IS_WORKSPACE (self), NULL);
+
+  return self->ws_type;
 }
 

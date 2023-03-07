@@ -54,7 +54,7 @@ void         gnome_semilab_window_remove_page   (GnomeSemilabWindow *self,
 
 extern
 void         gnome_semilab_window_open_project  (GnomeSemilabWindow *self,
-                                                 const gchar        *ws_type)
+                                                 const gchar        *ws_type);
 
 G_END_DECLS
 

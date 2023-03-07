@@ -20,7 +20,11 @@
 
 #pragma once
 
+#include <adwaita.h>
+
+#define SEMILAB_GLOBAL_INSIDE
 #include "gnome-semilab-application.h"
+#undef SEMILAB_GLOBAL_INSIDE
 
 G_BEGIN_DECLS
 

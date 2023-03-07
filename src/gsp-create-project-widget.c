@@ -39,13 +39,6 @@ struct _GspCreateProjectWidget
 G_DEFINE_FINAL_TYPE (GspCreateProjectWidget, gsp_create_project_widget, GTK_TYPE_WIDGET)
 
 static void
-gsp_create_project_widget_expand_cb (GtkButton *button,
-                                     GtkWindow *window)
-{
-  gtk_window_destroy (window);
-}
-
-static void
 expand_action (GtkWidget   *widget,
                const gchar *action_name,
                GVariant    *param)

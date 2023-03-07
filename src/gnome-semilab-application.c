@@ -70,7 +70,7 @@ gnome_semilab_application_foreach_workspace (GnomeSemilabApplication *self,
 
 GnomeSemilabWorkspace *
 gnome_semilab_application_find_project (GnomeSemilabApplication *self,
-                                         const gchar             *ws_type)
+                                        const gchar             *ws_type)
 {
   g_return_val_if_fail (GNOME_SEMILAB_IS_APPLICATION (self), NULL);
 
@@ -82,6 +82,8 @@ gnome_semilab_application_find_project (GnomeSemilabApplication *self,
       if (workspace_type != NULL && !g_strcmp0 (workspace_type, ws_type))
         return workspace;
     }
+
+  return NULL;
 }
 
 GnomeSemilabApplication *
@@ -125,7 +127,10 @@ gnome_semilab_application_dispose (GObject *object)
 static void
 gnome_semilab_application_class_init (GnomeSemilabApplicationClass *klass)
 {
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GApplicationClass *app_class = G_APPLICATION_CLASS (klass);
+
+  object_class->dispose = gnome_semilab_application_dispose;
 
   app_class->activate = gnome_semilab_application_activate;
 }
@@ -177,7 +182,7 @@ gnome_semilab_application_load_project (GSimpleAction *action,
   g_assert (!parameter || g_variant_is_of_type (parameter, G_VARIANT_TYPE_STRING));
   g_assert (GNOME_SEMILAB_IS_APPLICATION (self));
 
-  workspace = gnome_semilab_workspace_new (self);
+  workspace = gnome_semilab_workspace_new (ADW_APPLICATION (self));
 }
 
 static const GActionEntry app_actions[] = {
@@ -190,6 +195,7 @@ static void
 gnome_semilab_application_init (GnomeSemilabApplication *self)
 {
   self->workspaces = g_ptr_array_new_with_free_func (g_object_unref);
+  // g_application_set_default (G_APPLICATION (self));
 
   g_action_map_add_action_entries (G_ACTION_MAP (self),
                                    app_actions,

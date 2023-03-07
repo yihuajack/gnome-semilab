@@ -1,6 +1,6 @@
-/* gnome-semilab-workspace.h
+/* gnome-semilab-workspace-private.h
  *
- * Copyright 2023 Yihua Liu <yihuajack@live.cn>
+ * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,22 +20,16 @@
 
 #pragma once
 
-#include <adwaita.h>
+#include "gnome-semilab-workspace.h"
 
 G_BEGIN_DECLS
 
-#define GNOME_SEMILAB_TYPE_WORKSPACE (gnome_semilab_workspace_get_type())
+struct _GnomeSemilabworkspace
+{
+  AdwApplicationWindow  parent_instance;
 
-G_DECLARE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, GNOME_SEMILAB, WORKSPACE, AdwApplicationWindow)
-
-extern
-gchar                 *gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace   *self);
-
-extern
-void                   gnome_semilab_workspace_activate    (GnomeSemilabWorkspace   *workspace);
-
-extern
-GnomeSemilabWorkspace *gnome_semilab_workspace_new         (AdwApplication          *app);
+  gchar                *ws_type;
+};
 
 G_END_DECLS
 

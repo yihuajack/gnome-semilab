@@ -3,6 +3,7 @@
   <gresource prefix="/com/github/yihuajack/GnomeSemiLab">
     <file preprocess="xml-stripblanks">gsp-create-project-widget.ui</file>
     <file preprocess="xml-stripblanks">gnome-semilab-window.ui</file>
+    <file preprocess="xml-stripblanks">gnome-semilab-workspace.ui</file>
     <file preprocess="xml-stripblanks">gtk/help-overlay.ui</file>
     <file>style.css</file>
   </gresource>
