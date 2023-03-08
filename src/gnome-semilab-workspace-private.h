@@ -24,7 +24,7 @@
 
 G_BEGIN_DECLS
 
-struct _GnomeSemilabworkspace
+struct _GnomeSemilabWorkspace
 {
   AdwApplicationWindow  parent_instance;
 
