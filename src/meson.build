@@ -7,6 +7,15 @@ gnome_semilab_sources = [
   'gnome-semilab-global.c',
 ]
 
+gnome_semilab_marshal = gnome.genmarshal('gnome-semilab-marshal',
+            internal: true,
+              prefix: 'gnome_semilab_marshal',
+             sources: ['gnome-semilab-marshal.defs'],
+  valist_marshallers: true,
+)
+
+gnome_semilab_sources += gnome_semilab_marshal
+
 gnome_semilab_deps = [
   dependency('gtk4'),
   dependency('libadwaita-1'),

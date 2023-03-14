@@ -22,8 +22,8 @@
 
 #include "gnome-semilab-global.h"
 
-GnomeSemilabWorkspace *
-gnome_semilab_widget_get_workspace (GtkWidget *widget)
+GnomeSemilabWindow *
+gnome_semilab_widget_get_window (GtkWidget *widget)
 {
   GtkWindow *transient_for;
   GtkRoot *root;
@@ -36,9 +36,9 @@ gnome_semilab_widget_get_workspace (GtkWidget *widget)
     root = gtk_widget_get_root (widget);
 
   transient_for = gtk_window_get_transient_for (GTK_WINDOW (root));
-  if (root && !GNOME_SEMILAB_IS_WORKSPACE (root) && GTK_IS_WINDOW (root) && transient_for)
-    return gnome_semilab_widget_get_workspace (GTK_WIDGET (transient_for));
+  if (root && !GNOME_SEMILAB_IS_WINDOW (root) && GTK_IS_WINDOW (root) && transient_for)
+    return gnome_semilab_widget_get_window (GTK_WIDGET (transient_for));
 
-  return GNOME_SEMILAB_IS_WORKSPACE (root) ? GNOME_SEMILAB_WORKSPACE (root) : NULL;
+  return GNOME_SEMILAB_IS_WINDOW (root) ? GNOME_SEMILAB_WINDOW (root) : NULL;
 }
 

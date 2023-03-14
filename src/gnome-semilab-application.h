@@ -31,11 +31,11 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (GnomeSemilabApplication, gnome_semilab_application, GNOME_SEMILAB, APPLICATION, AdwApplication)
 
 extern
-void                     gnome_semilab_application_add_worksapce     (GnomeSemilabApplication *self,
+void                     gnome_semilab_application_add_workspace     (GnomeSemilabApplication *self,
                                                                       GnomeSemilabWorkspace   *workspace);
 
 extern
-void                     gnome_semilab_application_remove_worksapce  (GnomeSemilabApplication *self,
+void                     gnome_semilab_application_remove_workspace  (GnomeSemilabApplication *self,
                                                                       GnomeSemilabWorkspace   *workspace);
 
 extern

@@ -20,7 +20,10 @@
 
 #include "config.h"
 
-#include "gnome-semilab-global.h"
+#include "gnome-semilab-marshal.h"
+
+#include "gnome-semilab-application.h"
+#include "gnome-semilab-workspace.h"
 #include "gnome-semilab-window.h"
 #include "gsp-create-project-widget.h"
 #include "gnome-semilab-resources.h"
@@ -41,6 +44,13 @@ struct _GnomeSemilabWindow
 };
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWindow, gnome_semilab_window, ADW_TYPE_APPLICATION_WINDOW)
+
+enum {
+  OPEN_WORKSPACE,
+  N_SIGNALS
+};
+
+static guint signals [N_SIGNALS];
 
 static void
 stack_notify_visible_child_cb (GnomeSemilabWindow *self,
@@ -158,14 +168,27 @@ gnome_semilab_window_open_project (GnomeSemilabWindow *self,
                                    const gchar        *ws_type)
 {
   GnomeSemilabWorkspace *workspace;
+  gboolean ret = FALSE;
 
-  g_return_if_fail (GNOME_SEMILAB_IS_WORKSPACE (self));
+  g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
+
+  g_signal_emit (self, signals [OPEN_WORKSPACE], 0, ws_type, &ret);
+
+  if (ret)
+    goto not_ready;
 
   if ((workspace = gnome_semilab_application_find_project (GNOME_SEMILAB_APPLICATION_DEFAULT, ws_type)))
     {
       gnome_semilab_workspace_activate (workspace);
       gtk_window_destroy (GTK_WINDOW (self));
     }
+  else
+    {
+      g_error ("Workspace not found");
+    }
+
+not_ready:
+  return;
 }
 
 static void
@@ -207,6 +230,20 @@ gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
 
   object_class->constructed = gnome_semilab_window_constructed;
   object_class->dispose = gnome_semilab_window_dispose;
+
+  signals [OPEN_WORKSPACE] = g_signal_new_class_handler ("open-workspace",
+                                                         G_TYPE_FROM_CLASS (klass),
+                                                         G_SIGNAL_RUN_LAST,
+                                                         G_CALLBACK (gnome_semilab_window_open_project),
+                                                         g_signal_accumulator_true_handled,
+                                                         NULL,
+                                                         gnome_semilab_marshal_BOOLEAN__OBJECT,
+                                                         G_TYPE_BOOLEAN,
+                                                         1,
+                                                         G_TYPE_CHAR | G_SIGNAL_TYPE_STATIC_SCOPE);
+  g_signal_set_va_marshaller (signals[OPEN_WORKSPACE],
+                              G_TYPE_FROM_CLASS (klass),
+                              gnome_semilab_marshal_BOOLEAN__OBJECTv);
 
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gnome-semilab-window.ui");
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWindow, back_button);

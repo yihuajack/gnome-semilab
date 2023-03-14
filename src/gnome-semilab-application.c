@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include <glib/gi18n.h>
+
 #include "gnome-semilab-application.h"
 #include "gnome-semilab-window.h"
 
@@ -33,7 +35,7 @@ struct _GnomeSemilabApplication
 G_DEFINE_TYPE (GnomeSemilabApplication, gnome_semilab_application, ADW_TYPE_APPLICATION)
 
 void
-gnome_semilab_application_add_worksapce (GnomeSemilabApplication *self,
+gnome_semilab_application_add_workspace (GnomeSemilabApplication *self,
                                          GnomeSemilabWorkspace   *workspace)
 {
   g_return_if_fail (GNOME_SEMILAB_IS_APPLICATION (self));
@@ -183,12 +185,13 @@ gnome_semilab_application_load_project (GSimpleAction *action,
   g_assert (GNOME_SEMILAB_IS_APPLICATION (self));
 
   workspace = gnome_semilab_workspace_new (ADW_APPLICATION (self));
+  gnome_semilab_application_add_workspace (self, workspace);
 }
 
 static const GActionEntry app_actions[] = {
   { "quit", gnome_semilab_application_quit_action },
   { "about", gnome_semilab_application_about_action },
-  { "load-project", gnome_semilab_application_load_project, "s" },
+  { "create-project", gnome_semilab_application_load_project, "s" },
 };
 
 static void
@@ -204,5 +207,13 @@ gnome_semilab_application_init (GnomeSemilabApplication *self)
   gtk_application_set_accels_for_action (GTK_APPLICATION (self),
                                          "app.quit",
                                          (const char *[]) { "<primary>q", NULL });
+
+  g_application_add_main_option (G_APPLICATION (self),
+                                 "create-project",
+                                 0,
+                                 G_OPTION_FLAG_IN_MAIN,
+                                 G_OPTION_ARG_NONE,
+                                 _("Display the simulation guide"),
+                                 NULL);
 }
 

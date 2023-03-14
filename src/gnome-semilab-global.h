@@ -23,13 +23,13 @@
 #include <adwaita.h>
 
 #define SEMILAB_GLOBAL_INSIDE
-#include "gnome-semilab-application.h"
+#include "gnome-semilab-window.h"
 #undef SEMILAB_GLOBAL_INSIDE
 
 G_BEGIN_DECLS
 
 extern
-GnomeSemilabWorkspace *gnome_semilab_widget_get_workspace (GtkWidget *widget);
+GnomeSemilabWindow *gnome_semilab_widget_get_window (GtkWidget *widget);
 
 G_END_DECLS
 
