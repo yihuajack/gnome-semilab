@@ -88,6 +88,17 @@ gnome_semilab_application_find_project (GnomeSemilabApplication *self,
   return NULL;
 }
 
+void
+gnome_semilab_application_create_project (GnomeSemilabApplication *self)
+{
+  g_return_if_fail (GNOME_SEMILAB_IS_APPLICATION (self));
+
+  g_autoptr(GnomeSemilabWorkspace) workspace = NULL;
+
+  workspace = gnome_semilab_workspace_new (ADW_APPLICATION (self));
+  gnome_semilab_application_add_workspace (self, workspace);
+}
+
 GnomeSemilabApplication *
 gnome_semilab_application_new (const char        *application_id,
                                GApplicationFlags  flags)
@@ -191,7 +202,7 @@ gnome_semilab_application_load_project (GSimpleAction *action,
 static const GActionEntry app_actions[] = {
   { "quit", gnome_semilab_application_quit_action },
   { "about", gnome_semilab_application_about_action },
-  { "create-project", gnome_semilab_application_load_project, "s" },
+  { "load-project", gnome_semilab_application_load_project, "s" },
 };
 
 static void

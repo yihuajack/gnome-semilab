@@ -24,13 +24,43 @@
     ],
     "modules" : [
         {
+            "name": "libcsv",
+            "builddir" : true,
+            "buildsystem" : "autotools",
+            "no-autogen" : false,
+            "rm-configure" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/rgamble/libcsv"
+                },
+                {
+                    "type" : "script",
+                    "commands": [ "autoreconf -fi" ]
+                }
+            ]
+        },
+        {
+            "name": "xlsxwriter",
+            "builddir" : true,
+            "buildsystem" : "cmake",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "branch" : "main",
+                    "url" :"https://github.com/jmcnamara/libxlsxwriter"
+                }
+            ]
+        },
+        {
             "name" : "gnome-semilab",
             "builddir" : true,
             "buildsystem" : "meson",
             "sources" : [
                 {
                     "type" : "git",
-                    "url" : "file:///home/ayka-tsuzuki/SemiLab"
+                    "branch" : "main",
+                    "url" : "file:///home/ayka-tsuzuki/gnome-semilab"
                 }
             ]
         }

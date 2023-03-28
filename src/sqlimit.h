@@ -1,6 +1,6 @@
-/* gnome-semilab-workspace-private.h
+/* sqlimit.h
  *
- * Copyright 2022-2023 Yihua Liu <yihuajack@live.cn>
+ * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,22 +18,19 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
+#include "glib.h"
 
-#include "gnome-semilab-workspace.h"
+#include <csv.h>
 
-G_BEGIN_DECLS
+extern
+void cb1 (void *s, gsize len, void *data);
 
-struct _GnomeSemilabWorkspace
-{
-  AdwApplicationWindow  parent_instance;
+extern
+void cb2 (gint c, void *data);
 
-  gchar                *ws_type;
-  GFile                *table;
+extern
+void read_csv (FILE *fp);
 
-  GtkMenuButton        *menu_button;
-  GtkPopoverMenu       *win_menu;
-};
-
-G_END_DECLS
+extern
+void sqlimit_main (FILE *fp);
 

@@ -5,8 +5,49 @@
   <template class="GnomeSemilabWorkspace" parent="AdwApplicationWindow">
     <property name="default-width">1200</property>
     <property name="default-height">900</property>
-    <child type="title">
-      <object class="AdwWindowTitle" id="title"/>
+    <child>
+      <object class="GtkBox">
+        <property name="hexpand">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="AdwHeaderBar" id="header_bar">
+            <property name="title-widget">
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">SemiLab</property>
+                <property name="single-line-mode">True</property>
+                <property name="ellipsize">end</property>
+                <property name="width-chars">7</property>
+                <style>
+                  <class name="title"/>
+                </style>
+              </object>
+            </property>
+            <child type="end">
+              <object class="GtkMenuButton" id="menu_button">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="popover">win_menu</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
     </child>
   </template>
+  <menu id="workspace-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Import Spectra...</attribute>
+        <attribute name="action">ws.import</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Start Simulation...</attribute>
+        <attribute name="action">ws.start-sim</attribute>
+      </item>
+    </section>
+  </menu>
+  <object class="GtkPopoverMenu" id="win_menu">
+    <property name="menu-model">workspace-menu</property>
+  </object>
 </interface>

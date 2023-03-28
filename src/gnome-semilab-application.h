@@ -46,6 +46,9 @@ extern
 GnomeSemilabWorkspace   *gnome_semilab_application_find_project      (GnomeSemilabApplication *self,
                                                                       const gchar             *ws_type);
 
+extern
+void                     gnome_semilab_application_create_project    (GnomeSemilabApplication *self);
+
 GnomeSemilabApplication *gnome_semilab_application_new               (const char              *application_id,
                                                                       GApplicationFlags        flags);
 

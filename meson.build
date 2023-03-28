@@ -1,6 +1,7 @@
 project('gnome-semilab', 'c',
+          license: 'GPL3+',
           version: '0.1.0',
-    meson_version: '>= 0.59.0',
+    meson_version: '>= 0.60',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
 
@@ -71,6 +72,16 @@ test_c_args = [
   '-fno-strict-aliasing',
   ['-Werror=format-security', '-Werror=format=2'],
 ]
+
+gtk_req_version = '4.8.3'
+libadwaita_req_version = '1.2.2'
+
+gtk_req = '>= @0@'.format(gtk_req_version)
+libadwaita_req = '>= @0@'.format(libadwaita_req_version)
+
+libgtk_dep = dependency('gtk4', version: gtk_req)
+libadwaita_dep = dependency('libadwaita-1', version: libadwaita_req)
+
 if get_option('buildtype') != 'plain'
   test_c_args += '-fstack-protector-strong'
 endif

@@ -172,22 +172,21 @@ gnome_semilab_window_open_project (GnomeSemilabWindow *self,
 
   g_return_if_fail (GNOME_SEMILAB_IS_WINDOW (self));
 
-  g_signal_emit (self, signals [OPEN_WORKSPACE], 0, ws_type, &ret);
+  // g_signal_emit (self, signals [OPEN_WORKSPACE], 0, ws_type, &ret);
 
   if (ret)
     goto not_ready;
 
-  if ((workspace = gnome_semilab_application_find_project (GNOME_SEMILAB_APPLICATION_DEFAULT, ws_type)))
+  if (!(workspace = gnome_semilab_application_find_project (GNOME_SEMILAB_APPLICATION_DEFAULT, ws_type)))
     {
-      gnome_semilab_workspace_activate (workspace);
-      gtk_window_destroy (GTK_WINDOW (self));
+      gnome_semilab_application_create_project (GNOME_SEMILAB_APPLICATION_DEFAULT);
+      workspace = gnome_semilab_application_find_project (GNOME_SEMILAB_APPLICATION_DEFAULT, ws_type);
     }
-  else
-    {
-      g_error ("Workspace not found");
-    }
+  gnome_semilab_workspace_activate (workspace);
+  gtk_window_destroy (GTK_WINDOW (self));
 
 not_ready:
+  g_debug ("Open project not ready");
   return;
 }
 
@@ -241,7 +240,7 @@ gnome_semilab_window_class_init (GnomeSemilabWindowClass *klass)
                                                          G_TYPE_BOOLEAN,
                                                          1,
                                                          G_TYPE_CHAR | G_SIGNAL_TYPE_STATIC_SCOPE);
-  g_signal_set_va_marshaller (signals[OPEN_WORKSPACE],
+  g_signal_set_va_marshaller (signals [OPEN_WORKSPACE],
                               G_TYPE_FROM_CLASS (klass),
                               gnome_semilab_marshal_BOOLEAN__OBJECTv);
 
@@ -271,5 +270,4 @@ gnome_semilab_window_init (GnomeSemilabWindow *self)
   gtk_stack_sidebar_set_stack (self->stack_sidebar, self->pages);
   stack_notify_visible_child_cb (self, NULL, self->pages);
 }
-
 

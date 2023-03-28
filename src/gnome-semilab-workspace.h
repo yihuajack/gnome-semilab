@@ -29,13 +29,17 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, GNOME_SEMILAB, WORKSPACE, AdwApplicationWindow)
 
 extern
-gchar                 *gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace   *self);
+gchar                 *gnome_semilab_workspace_get_ws_type (GnomeSemilabWorkspace *self);
 
 extern
-void                   gnome_semilab_workspace_activate    (GnomeSemilabWorkspace   *workspace);
+void                   gnome_semilab_workspace_set_ws_type (GnomeSemilabWorkspace *self,
+                                                            const gchar           *ws_type);
 
 extern
-GnomeSemilabWorkspace *gnome_semilab_workspace_new         (AdwApplication          *app);
+void                   gnome_semilab_workspace_activate    (GnomeSemilabWorkspace *workspace);
+
+extern
+GnomeSemilabWorkspace *gnome_semilab_workspace_new         (AdwApplication        *app);
 
 G_END_DECLS
 
