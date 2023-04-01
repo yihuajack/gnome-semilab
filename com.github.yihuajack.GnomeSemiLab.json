@@ -24,7 +24,7 @@
     ],
     "modules" : [
         {
-            "name": "libcsv",
+            "name" : "libcsv",
             "builddir" : true,
             "buildsystem" : "autotools",
             "no-autogen" : false,
@@ -41,7 +41,7 @@
             ]
         },
         {
-            "name": "xlsxwriter",
+            "name" : "xlsxwriter",
             "builddir" : true,
             "buildsystem" : "cmake",
             "sources" : [
@@ -49,6 +49,23 @@
                     "type" : "git",
                     "branch" : "main",
                     "url" :"https://github.com/jmcnamara/libxlsxwriter"
+                }
+            ]
+        },
+        {
+            "name" : "gsl",
+            "builddir" : true,
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "archive-type" : "tar-gzip",
+                    "url" : "https://ftp.gnu.org/gnu/gsl/gsl-2.7.1.tar.gz",
+                    "mirror-urls" : [
+                        "https://mirror.vern.cc/gnu/gsl/gsl-2.7.1.tar.gz",
+                        "https://mirror.us-midwest-1.nexcess.net/gnu/gsl/gsl-2.7.1.tar.gz"
+                    ],
+                    "sha512" : "3300a748b63b583374701d5ae2a9db7349d0de51061a9f98e7c145b2f7de9710b3ad58b3318d0be2a9a287ace4cc5735bb9348cdf48075b98c1f6cc1029df131"
                 }
             ]
         },

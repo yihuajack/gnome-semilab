@@ -18,51 +18,22 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
+#include <unistd.h>
+
 #include "sqlimit.h"
+#include "csv_reader.h"
 
-struct counts
+static void
+interpolate_interp1d (void)
 {
-  gulong fields;
-  gulong rows;
-};
-
-void cb1 (void *s, gsize len, void *data)
-{
-  ((struct counts *)data)->fields++;
+  gsl_interp_accel *acc = gsl_interp_accel_alloc ();
+  gsl_spline *spline = gsl_spline_alloc (gsl_interp_linear, 10);
 }
 
-void cb2 (gint c, void *data)
-{
-  ((struct counts *)data)->rows++;
-}
-
-void read_csv (FILE *fp)
-{
-  struct csv_parser p;
-  char buf[1024];
-  size_t bytes_read;
-  struct counts c = {0, 0};
-
-  if (csv_init(&p, 0) != 0)
-    return;
-
-  while ((bytes_read = fread (buf, 1, 1024, fp)) > 0)
-    {
-      if (csv_parse (&p, buf, bytes_read, cb1, cb2, &c) != bytes_read)
-        {
-          fprintf (stderr, "libcsv: Error while parsing file: %s\n", csv_strerror (csv_error (&p)));
-          return;
-        }
-    }
-
-  csv_fini (&p, cb1, cb2, &c);
-
-  printf ("libcsv: %lu fields, %lu rows\n", c.fields, c.rows);
-
-  csv_free (&p);
-}
-
-void sqlimit_main (FILE *fp)
+void
+sqlimit_main (FILE *fp)
 {
   read_csv (fp);
 }

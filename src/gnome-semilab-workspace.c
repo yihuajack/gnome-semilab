@@ -104,7 +104,7 @@ gnome_semilab_workspace_open_action (GtkWidget   *instance,
 
   g_signal_connect_object (chooser, "response", G_CALLBACK (gnome_semilab_workspace_open_response_cb), workspace, G_CONNECT_SWAPPED);
 
-  gtk_native_dialog_hide (GTK_NATIVE_DIALOG (chooser));
+  gtk_native_dialog_show (GTK_NATIVE_DIALOG (chooser));
 }
 
 #endif

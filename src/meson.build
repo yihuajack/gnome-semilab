@@ -5,6 +5,8 @@ gnome_semilab_sources = [
   'gnome-semilab-window.c',
   'gsp-create-project-widget.c',
   'gnome-semilab-global.c',
+  'utils.c',
+  'csv_reader.c',
   'sqlimit.c',
 ]
 
@@ -29,6 +31,7 @@ gnome_semilab_deps = [
   libadwaita_dep,
   libcsv_dep,
   dependency('xlsxwriter'),
+  dependency('gsl'),
 ]
 
 gnome_semilab_sources += gnome.compile_resources('gnome-semilab-resources',

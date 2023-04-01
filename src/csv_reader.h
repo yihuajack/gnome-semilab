@@ -1,4 +1,4 @@
-/* sqlimit.h
+/* csv_reader.h
  *
  * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
@@ -20,6 +20,28 @@
 
 #include <stdio.h>
 
+struct csv_data
+{
+  char        **fields;
+  unsigned int *wavelengths;
+  double       *intensities;
+  unsigned int  num_fields;
+  unsigned int  num_datarows; // excluding header rows
+};
+
 extern
-void sqlimit_main (FILE *fp);
+char           **read_csv_fields (FILE *fp,
+                                  int  *length);
+
+extern
+void             cb1             (void  *s,
+                                  size_t len,
+                                  void  *data);
+
+extern
+void             cb2             (int   c,
+                                  void *data);
+
+extern
+struct csv_data *read_csv        (FILE *fp);
 

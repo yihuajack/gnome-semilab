@@ -1,4 +1,4 @@
-/* sqlimit.h
+/* utils.h
  *
  * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
@@ -19,7 +19,24 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
+
+#if defined(__MINGW32__) || defined(_MSC_VER)
+extern
+wchar_t *sl_multibyte_to_wchar_str (const char *in_mb_str)
 
 extern
-void sqlimit_main (FILE *fp);
+wchar_t *longabspath               (wchar_t*    unicodePath);
+#endif
+
+extern
+FILE    *sl_fopen                  (const char *filename,
+                                    const char *mode);
+
+extern
+size_t   sl_fread                  (void  *buffer,
+                                    size_t size,
+                                    size_t count,
+                                    FILE  *stream,
+                                    bool   allow_early_eof);
 

@@ -1,4 +1,4 @@
-/* sqlimit.h
+/* sqlimit-test.c
  *
  * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
@@ -18,8 +18,23 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 
-extern
-void sqlimit_main (FILE *fp);
+#include "../src/sqlimit.h"
+
+int
+main (int   argc,
+      char *argv[])
+{
+  FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen 3300K.csv", "r");
+  if (!fp)
+    {
+      perror("File opening failed");
+      exit (EXIT_FAILURE);
+    }
+  rewind (fp);
+  sqlimit_main (fp);
+  fclose (fp);
+  exit (EXIT_SUCCESS);
+}
 
