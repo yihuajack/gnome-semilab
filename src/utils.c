@@ -105,13 +105,43 @@ sl_fread (void  *buffer,
       if (feof (stream) && !allow_early_eof)
         {
           fprintf (stderr, "Error reading stream: unexpected end of file.\n");
-          fprintf(stderr, "Expected to read %ld. Read only %ld\n", count, read_len);
+          fprintf (stderr, "Expected to read %ld. Read only %ld\n", count, read_len);
         }
       else if (ferror (stream))
         {
-          fprintf(stderr, "Error: sl_fread() failed to read file.\n");
+          fprintf (stderr, "Error: sl_fread() failed to read file.\n");
         }
     }
   return read_len;
+}
+
+void
+matrix_transpose(double *m,
+                 int     w,
+                 int     h)
+{
+  int start;
+  double tmp;
+
+  for (start = 0; start <= w * h - 1; start++)
+    {
+      int next = start;
+      int i = 0;
+      do
+        {
+          i++;
+          next = (next % h) * w + next / h;
+        } while (next > start);
+      if (next < start || i == 1)
+        continue;
+
+      tmp = m[next = start];
+      do
+        {
+          i = (next % h) * w + next / h;
+          m[next] = (i == start) ? tmp : m[i];
+          next = i;
+        } while (next > start);
+    }
 }
 

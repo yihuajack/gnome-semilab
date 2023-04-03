@@ -19,6 +19,27 @@ gnome_semilab_marshal = gnome.genmarshal('gnome-semilab-marshal',
 
 gnome_semilab_sources += gnome_semilab_marshal
 
+# graph_sources = []
+# graph_include_directories = []
+# graph_link_with = []
+# graph_deps = [
+#   dependency('libplot'),
+# ]
+
+# subdir('graph')
+
+# graph = static_library('graph', graph_sources,
+#            dependencies: graph_deps,
+# 	           c_args: release_args,
+#     include_directories: graph_include_directories,
+#               link_with: graph_link_with,
+#   gnu_symbol_visibility: 'hidden',
+# )
+
+# gnome_semilab_static = [
+#   graph,
+# ]
+
 # The path in Flatpak sandbox
 libcsv_inc = include_directories('/usr/include')
 # https://github.com/mesonbuild/meson/issues/6235
@@ -32,14 +53,16 @@ gnome_semilab_deps = [
   libcsv_dep,
   dependency('xlsxwriter'),
   dependency('gsl'),
+  dependency('plplot'),
 ]
 
 gnome_semilab_sources += gnome.compile_resources('gnome-semilab-resources',
   'gnome-semilab.gresource.xml',
-  c_name: 'gnome_semilab'
+  c_name: 'gnome_semilab',
 )
 
 executable('gnome-semilab', gnome_semilab_sources,
   dependencies: gnome_semilab_deps,
        install: true,
+  # link_whole: gnome_semilab_static,
 )

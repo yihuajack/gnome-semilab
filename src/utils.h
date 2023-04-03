@@ -40,3 +40,8 @@ size_t   sl_fread                  (void  *buffer,
                                     FILE  *stream,
                                     bool   allow_early_eof);
 
+extern
+void     matrix_transpose          (double *m,
+                                    int     w,
+                                    int     h);
+

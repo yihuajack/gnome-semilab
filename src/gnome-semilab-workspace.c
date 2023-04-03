@@ -21,6 +21,7 @@
 #define G_LOG_DOMAIN "gnome-semilab-workspace"
 
 #include <glib/gi18n.h>
+#include <plplot.h>
 
 #include "gnome-semilab-workspace.h"
 #include "gnome-semilab-workspace-private.h"
@@ -35,6 +36,53 @@ enum {
 };
 
 static GParamSpec *properties[N_PROPS];
+
+static void
+open_file_as_spectrum (GnomeSemilabWorkspace *self)
+{
+  const char *path = g_file_get_path (self->table);
+  if (path)
+    {
+      // /run/user/1000/doc/9b9ece0/Tungsten-Halogen 3300K.csv
+      printf ("%s\n", path);
+      FILE *fp = fopen (path, "r");
+      if (fp)
+        {
+          self->spectrum = read_csv (fp);
+          fclose (fp);
+        }
+      else
+        {
+          g_warning ("Failed to open file %s", path);
+        }
+      g_free ((gpointer) path);
+    }
+  else
+    {
+      g_warning ("Failed to get file path");
+    }
+}
+
+static void
+draw_function (GtkDrawingArea *area,
+               cairo_t        *cr,
+               int             width,
+               int             height,
+               gpointer        data)
+{
+  GtkStyleContext *context;
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (area));
+
+  plparseopts (NULL, NULL, PL_PARSE_FULL);
+
+  plsdev ("extcairo");
+  plinit ();
+  pl_cmd( PLESC_DEVINIT, cr);
+  plenv (0.0, 1.0, 0.0, 1.0, 1, 0);
+  pllab ("x", "y", "title");
+  plend ();
+}
 
 void
 gnome_semilab_workspace_activate (GnomeSemilabWorkspace *workspace)
@@ -112,28 +160,20 @@ gnome_semilab_workspace_open_action (GtkWidget   *instance,
 static void
 gnome_semilab_workspace_sim_action (GtkWidget   *widget,
                                     const gchar *action_name,
-                                    GVariant   *param)
+                                    GVariant    *param)
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
-  const char *path = g_file_get_path (self->table);
-  if (path)
-    {
-      FILE *fp = fopen (path, "r");
-      if (fp)
-        {
-          sqlimit_main(fp);
-          fclose (fp);
-        }
-      else
-        {
-          g_warning ("Failed to open file %s", path);
-        }
-      g_free((gpointer) path);
-    }
-  else
-    {
-      g_warning ("Failed to get file path");
-    }
+  open_file_as_spectrum (self);
+}
+
+static void
+gnome_semilab_workspace_plot_spec_action (GtkWidget   *widget,
+                                          const gchar *action_name,
+                                          GVariant    *param)
+{
+  GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
+  open_file_as_spectrum (self);
+  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_function, NULL, NULL);
 }
 
 static void
@@ -201,8 +241,10 @@ gnome_semilab_workspace_class_init (GnomeSemilabWorkspaceClass *klass)
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gnome-semilab-workspace.ui");
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, menu_button);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, win_menu);
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, spectrum_plot);
 
   gtk_widget_class_install_action (widget_class, "ws.import", NULL, gnome_semilab_workspace_open_action);
+  gtk_widget_class_install_action (widget_class, "ws.plot-spec", NULL, gnome_semilab_workspace_plot_spec_action);
   gtk_widget_class_install_action (widget_class, "ws.start-sim", NULL, gnome_semilab_workspace_sim_action);
 
   /* GtkBuilder *builder = gtk_builder_new_from_resource ("/com/github/yihuajack/GnomeSemiLab/gtk/workspace-menus.ui");

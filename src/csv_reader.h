@@ -20,7 +20,7 @@
 
 #include <stdio.h>
 
-struct csv_data
+struct csv_data_uint_double
 {
   char        **fields;
   unsigned int *wavelengths;
@@ -29,18 +29,39 @@ struct csv_data
   unsigned int  num_datarows; // excluding header rows
 };
 
+struct csv_data
+{
+  char        **fields;
+  double       *wavelengths;
+  double       *intensities;
+  unsigned int  num_fields;
+  unsigned int  num_datarows;
+};
+
+// struct csv_body_uint_double;
+// struct csv_body_double_double;
+
 extern
 char           **read_csv_fields (FILE *fp,
                                   int  *length);
 
 extern
-void             cb1             (void  *s,
-                                  size_t len,
-                                  void  *data);
+void             cb1_uint_double (void   *s,
+                                  size_t  len,
+                                  void   *data);
 
 extern
-void             cb2             (int   c,
+void             cb1_double_double (void   *s,
+                                    size_t  len,
+                                    void    *data);
+
+extern
+void             cb2_uint_double (int   c,
                                   void *data);
+
+extern
+void             cb2_double_double (int   c,
+                                    void *data);
 
 extern
 struct csv_data *read_csv        (FILE *fp);

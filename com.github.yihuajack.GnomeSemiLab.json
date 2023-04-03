@@ -70,6 +70,18 @@
             ]
         },
         {
+            "name" : "plplot",
+            "builddir" : true,
+            "buildsystem" : "cmake",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "branch" : "master",
+                    "url" : "git://git.code.sf.net/p/plplot/plplot"
+                }
+            ]
+        },
+        {
             "name" : "gnome-semilab",
             "builddir" : true,
             "buildsystem" : "meson",

@@ -39,7 +39,7 @@ struct csv_head
   unsigned long num_rows;
 };
 
-struct csv_body
+struct csv_body_uint_double
 {
   unsigned int *wavelengths;
   double *intensities;
@@ -52,11 +52,77 @@ struct csv_body
   bool buf_reallocated;
 };
 
+struct csv_body_double_double
+{
+  double *data;
+  int size;
+  int buffer_size;
+  int num_rows;
+  unsigned int curr_num_cols;
+  unsigned int num_cols;
+  bool error;
+};
+
+typedef void (*CB1_UINT_DOUBLE)(void *, size_t, struct csv_body_uint_double *);
+typedef void (*CB1_DOUBLE_DOUBLE)(void *, size_t, struct csv_body_double_double *);
+typedef void (*CB2_UINT_DOUBLE)(int, struct csv_body_uint_double *);
+typedef void (*CB2_DOUBLE_DOUBLE)(int, struct csv_body_double_double *);
+
+/* enum
+{
+  UINT_DOUBLE_DATA,
+  DOUBLE_DOUBLE_DATA
+}; */
+
+// https://stackoverflow.com/questions/40096584/c11-generic-usage
+#define cb1_generic(s, len, data) _Generic((data),                         \
+                          struct csv_body_uint_double *: cb1_uint_double,  \
+                        struct csv_body_double_double *: cb1_double_double \
+)(s, len, data)
+
+#define cb2_generic(c, data) _Generic((data),                              \
+                          struct csv_body_uint_double *: cb2_uint_double,  \
+                        struct csv_body_double_double *: cb2_double_double \
+)(c, data)
+
+// https://stackoverflow.com/questions/47858491/c-macro-for-type-safe-callbacks
+// You can also optionally add any types of cb1 and cb2 to csv_parse_generic
+// and csv_fini generic function macros to specify that cb1 is cb1_uint_double
+// or cb1_double_double and cb2 is cb2_uint_double or cb2_double_double.
+#define csv_parse_generic(p, s, len, data)             \
+    csv_parse(                                         \
+        p,                                             \
+        s,                                             \
+        len,                                           \
+        _Generic(data,                                 \
+    struct csv_body_uint_double *: cb1_uint_double,    \
+  struct csv_body_double_double *: cb1_double_double), \
+        _Generic(data,                                 \
+    struct csv_body_uint_double *: cb2_uint_double,    \
+  struct csv_body_double_double *: cb2_double_double), \
+        data)
+
+#define csv_fini_generic(p, data)                      \
+    csv_fini(                                          \
+        p,                                             \
+        _Generic(data,                                 \
+    struct csv_body_uint_double *: cb1_uint_double,    \
+  struct csv_body_double_double *: cb1_double_double), \
+        _Generic(data,                                 \
+    struct csv_body_uint_double *: cb2_uint_double,    \
+  struct csv_body_double_double *: cb2_double_double), \
+        data)
+
+#define typename(x) _Generic((x),                                              \
+                             struct csv_body_uint_double: UINT_DOUBLE_DATA,    \
+                           struct csv_body_double_double: DOUBLE_DOUBLE_DATA)
+
 static void
 count_rows_head (int   c,
                  void *t)
 {
   struct csv_head *head = (struct csv_head *)t;
+  // Max num_rows = 326
   head->num_rows++;
 }
 
@@ -69,9 +135,9 @@ count_rows (int   c,
 }
 
 static void
-add_fields (void  *data,
-            size_t len,
-            void  *t)
+add_fields (void   *data,
+            size_t  len,
+            void   *t)
 {
   struct csv_head *head = (struct csv_head *)t;
   if (head->num_rows)
@@ -84,12 +150,15 @@ add_fields (void  *data,
     {
       head->buffer_size = head->buffer_size ? 2 * head->buffer_size : 512;
       head->fields = (char **) realloc (head->fields, sizeof (char *)*head->buffer_size);
+      printf ("INFO: head buffer is reallocated\n");
     }
-  head->fields[head->size++] = strdup (data ? (char *)data : "");
+  head->fields[head->size++] = strdup (data ? (char *)data : "NULL");
+  printf ("size=%d\nfield=%s\n", head->size, head->fields[head->size]);
 }
 
-char **read_csv_fields (FILE *fp,
-                        int  *length)
+char **
+read_csv_fields (FILE *fp,
+                 int  *length)
 {
   const unsigned int buf_size = 4096;
   char buf[4096];
@@ -113,22 +182,25 @@ char **read_csv_fields (FILE *fp,
   csv_free (&p);
   if (!head.num_rows)
     {
-      fprintf (stderr, "Number of rows in the header is 0.\n");
+      fprintf (stdout, "INFO: Number of rows in the header is 0.\n");
       return NULL;
     }
   *length = head.size - 1;
+  printf ("%lu %d\n%s\n%s\n", head.num_rows, head.size, head.fields[0], head.fields[1]);
   // Head fields should not be double-quoted; otherwise, csv_parse will give wrong results!
   return head.fields;
 }
 
 /* add cells */
 void
-cb1 (void  *s,
-     size_t len,
-     void  *data)
+cb1_uint_double (void   *s,
+                 size_t  len,
+                 void   *data)
 {
-  struct csv_body *body = (struct csv_body *)data;
-  char *endptr = "";
+  struct csv_body_uint_double *body = (struct csv_body_uint_double *)data;
+  // If using OpenModelica's code `char *ptr = "";`:
+  // warning: initialization discards ‘const’ qualifier from pointer target type [-Wdiscarded-qualifiers]
+  char *endptr = NULL;
   if (body->error)
     return;
   // Skip header rows
@@ -145,8 +217,8 @@ cb1 (void  *s,
         {
           body->buffer_size = body->wavelengths ? 2 * body->buffer_size : body->num_cols * 1024;
           body->buffer_size = body->buffer_size > 0 ? body->buffer_size : 1024;
-          body->wavelengths = body->wavelengths ? (unsigned int *)realloc (body->wavelengths, sizeof (unsigned int)*body->buffer_size)
-                                                : (unsigned int *)malloc (sizeof (unsigned int)*body->buffer_size);
+          body->wavelengths = body->wavelengths ? (unsigned int *)realloc (body->wavelengths, sizeof (unsigned int) * body->buffer_size)
+                                                : (unsigned int *)malloc (sizeof (unsigned int) * body->buffer_size);
           body->buf_reallocated = true;
         }
       // Suffix/postfix increment and decrement have precedence 1
@@ -163,8 +235,8 @@ cb1 (void  *s,
     {
       if (body->buf_reallocated)
         {
-          body->intensities = body->intensities ? (double *)malloc (sizeof (double)*body->buffer_size)
-                                                : (double *)realloc (body->intensities, sizeof (double)*body->buffer_size);
+          body->intensities = body->intensities ? (double *)malloc (sizeof (double) * body->buffer_size)
+                                                : (double *)realloc (body->intensities, sizeof (double) * body->buffer_size);
           body->buf_reallocated = false;
         }
       body->intensities[body->size++ / 2] = s ? strtod ((const char *)s, &endptr) : 0.0;
@@ -176,12 +248,55 @@ cb1 (void  *s,
     }
 }
 
+void
+cb1_double_double (void  *s,
+                   size_t len,
+                   void   *data)
+{
+  struct csv_body_double_double *body = (struct csv_body_double_double *)data;
+  char *endptr = NULL;
+  if (body->error)
+    return;
+  if (!body->num_rows)
+    {
+      body->curr_num_cols++;
+      body->num_cols++;
+      return;
+    }
+  if (body->size + 1 >= body->buffer_size)
+    {
+      body->buffer_size = body->data ? 2 * body->buffer_size : body->num_cols * 1024;
+      body->buffer_size = body->buffer_size > 0 ? body->buffer_size : 1024;
+      body->data = body->data ? (double *)realloc (body->data, sizeof (double) * body->buffer_size)
+                              : (double *)calloc (body->buffer_size, sizeof (double));
+    }
+  body->data[body->size++] = s ? strtod ((const char *)s, &endptr) : 0;
+  if (*endptr)
+    {
+      fprintf (stderr, "Found non-double data in the csv result-file: %s\n", (char *)s);
+      body->error = true;
+    }
+}
+
 /* add rows */
 void
-cb2 (int   c,
-     void *data)
+cb2_uint_double (int   c,
+                 void *data)
 {
-  struct csv_body *body = (struct csv_body *)data;
+  struct csv_body_uint_double *body = (struct csv_body_uint_double *)data;
+  body->num_rows++;
+  if (body->curr_num_cols != body->num_cols)
+    {
+      fprintf(stderr, "Did not find data for all fields for row: %d\n", body->num_rows);
+      body->error = true;
+    }
+}
+
+void
+cb2_double_double (int   c,
+                   void *data)
+{
+  struct csv_body_double_double *body = (struct csv_body_double_double *)data;
   body->num_rows++;
   if (body->curr_num_cols != body->num_cols)
     {
@@ -198,7 +313,7 @@ read_csv (FILE *fp)
   char **fields;
   int dummy;
   struct csv_parser p;
-  struct csv_body body = {0};
+  struct csv_body_double_double body = {0};
   struct csv_data *result;
   size_t bytes_read;
 
@@ -209,7 +324,7 @@ read_csv (FILE *fp)
       return NULL;
     }
 
-  if (csv_init(&p, CSV_STRICT | CSV_REPALL_NL | CSV_STRICT_FINI | CSV_APPEND_NULL | CSV_EMPTY_IS_NULL) != 0)
+  if (csv_init(&p, 0) != 0)
     {
       fprintf (stderr, "csv_init() in read_csv() failed.\n");
       return NULL;
@@ -226,14 +341,14 @@ read_csv (FILE *fp)
           csv_free (&p);
           return NULL;
         }
-      if (csv_parse (&p, buf, bytes_read, cb1, cb2, &body) != bytes_read)
+      if (csv_parse_generic (&p, buf, bytes_read, &body) != bytes_read)
         {
           fprintf (stderr, "libcsv: Error while parsing file: %s\n", csv_strerror (csv_error (&p)));
           return NULL;
         }
     } while (!body.error && !feof (fp));
 
-  csv_fini (&p, cb1, cb2, &body);
+  csv_fini_generic (&p, &body);
   csv_free (&p);
   if (body.error)
     {
@@ -247,10 +362,23 @@ read_csv (FILE *fp)
       return NULL;
     }
   result->fields = fields;
-  result->wavelengths = body.wavelengths;
-  result->intensities = body.intensities;
   result->num_fields = body.num_cols;
   result->num_datarows = body.size / body.num_cols;
+  double *data = body.data;
+#ifdef UINT_DOUBLE_DATA
+  result->wavelengths = body.wavelengths;
+  result->intensities = body.intensities;
+#else
+  matrix_transpose (data, result->num_fields, result->num_datarows);
+  // https://stackoverflow.com/questions/5850000/how-to-split-array-into-two-arrays-in-c
+  // Use calloc() to initialize all bytes in the allocated storage to zero; otherwise,
+  // libcsv: Error while parsing file: error parsing data while strict checking enabled
+  // Found non-double data in the first column of csv result-file: 300gsten-Halogen 3300K""
+  result->wavelengths = (double *)calloc (body.buffer_size, sizeof (double));
+  result->intensities = (double *)calloc (body.buffer_size, sizeof (double));
+  memcpy (result->wavelengths, data, result->num_datarows * sizeof (double));
+  memcpy (result->intensities, data + result->num_datarows, result->num_datarows * sizeof (double));
+#endif
   return result;
 }
 
