@@ -6,7 +6,7 @@
     <property name="default-width">1200</property>
     <property name="default-height">900</property>
     <child>
-      <object class="GtkBox">
+      <object class="GtkBox" id="ws_main_box">
         <property name="hexpand">False</property>
         <property name="orientation">vertical</property>
         <child>
@@ -32,8 +32,8 @@
         </child>
         <child>
           <object class="GtkDrawingArea" id="spectrum_plot">
-            <property name="content-width">300</property>
-            <property name="content-height">300</property>
+            <property name="content-width">600</property>
+            <property name="content-height">600</property>
           </object>
         </child>
       </object>

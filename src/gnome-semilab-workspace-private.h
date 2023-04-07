@@ -33,6 +33,7 @@ struct _GnomeSemilabWorkspace
   GFile                *table;
   struct csv_data      *spectrum;
 
+  GtkBox               *ws_main_box;
   GtkMenuButton        *menu_button;
   GtkPopoverMenu       *win_menu;
   GtkDrawingArea       *spectrum_plot;

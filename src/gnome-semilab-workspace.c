@@ -70,15 +70,14 @@ draw_function (GtkDrawingArea *area,
                int             height,
                gpointer        data)
 {
-  GtkStyleContext *context;
-
-  context = gtk_widget_get_style_context (GTK_WIDGET (area));
-
-  plparseopts (NULL, NULL, PL_PARSE_FULL);
+  struct csv_data *spectrum_data = (struct csv_data *)data;
+  const char *xlabel = spectrum_data->fields[0];
+  const char *ylabel = spectrum_data->fields[1];
+  const double xmin =
 
   plsdev ("extcairo");
   plinit ();
-  pl_cmd( PLESC_DEVINIT, cr);
+  pl_cmd (PLESC_DEVINIT, cr);
   plenv (0.0, 1.0, 0.0, 1.0, 1, 0);
   pllab ("x", "y", "title");
   plend ();
@@ -167,13 +166,27 @@ gnome_semilab_workspace_sim_action (GtkWidget   *widget,
 }
 
 static void
+show_image (GtkWidget *widget)
+{
+  GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
+  GtkWidget *image;
+  GdkPixbuf *pixbuf;
+  pixbuf = gdk_pixbuf_new_from_file ("/home/ayka-tsuzuki/gnome-semilab/test/output.png", NULL);
+  g_assert (pixbuf != NULL);
+  image = gtk_image_new_from_pixbuf (pixbuf);
+  g_object_unref (pixbuf);
+  gtk_image_set_pixel_size (GTK_IMAGE (image), 400);
+  gtk_box_append (self->ws_main_box, image);
+}
+
+static void
 gnome_semilab_workspace_plot_spec_action (GtkWidget   *widget,
                                           const gchar *action_name,
                                           GVariant    *param)
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
   open_file_as_spectrum (self);
-  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_function, NULL, NULL);
+  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_function, self->spectrum, NULL);
 }
 
 static void
@@ -239,6 +252,7 @@ gnome_semilab_workspace_class_init (GnomeSemilabWorkspaceClass *klass)
   g_object_class_install_properties (object_class, N_PROPS, properties);
 
   gtk_widget_class_set_template_from_resource (widget_class, "/com/github/yihuajack/GnomeSemiLab/gnome-semilab-workspace.ui");
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, ws_main_box);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, menu_button);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, win_menu);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, spectrum_plot);

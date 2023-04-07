@@ -38,9 +38,6 @@ struct csv_data
   unsigned int  num_datarows;
 };
 
-// struct csv_body_uint_double;
-// struct csv_body_double_double;
-
 extern
 char           **read_csv_fields (FILE *fp,
                                   int  *length);
