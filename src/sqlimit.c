@@ -20,7 +20,6 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
-#include <unistd.h>
 
 #include "sqlimit.h"
 #include "csv_reader.h"

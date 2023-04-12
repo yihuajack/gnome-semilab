@@ -22,10 +22,10 @@
 
 #include <glib/gi18n.h>
 #include <plplot.h>
+#include <gsl/gsl_statistics.h>
 
 #include "gnome-semilab-workspace.h"
 #include "gnome-semilab-workspace-private.h"
-#include "sqlimit.h"
 
 G_DEFINE_FINAL_TYPE (GnomeSemilabWorkspace, gnome_semilab_workspace, ADW_TYPE_APPLICATION_WINDOW)
 
@@ -44,11 +44,11 @@ open_file_as_spectrum (GnomeSemilabWorkspace *self)
   if (path)
     {
       // /run/user/1000/doc/9b9ece0/Tungsten-Halogen 3300K.csv
-      printf ("%s\n", path);
       FILE *fp = fopen (path, "r");
       if (fp)
         {
           self->spectrum = read_csv (fp);
+          printf ("INFO: Read spectrum CSV data file %s\n", path);
           fclose (fp);
         }
       else
@@ -73,14 +73,25 @@ draw_function (GtkDrawingArea *area,
   struct csv_data *spectrum_data = (struct csv_data *)data;
   const char *xlabel = spectrum_data->fields[0];
   const char *ylabel = spectrum_data->fields[1];
-  const double xmin =
+  double xmin, xmax, ymin, ymax;
+  gsl_stats_minmax (&xmin, &xmax, spectrum_data->wavelengths, 1, spectrum_data->num_datarows);
+  gsl_stats_minmax (&ymin, &ymax, spectrum_data->intensities, 1, spectrum_data->num_datarows);
+  printf ("INFO: Plot ranges calculated.\n");
 
   plsdev ("extcairo");
+  printf ("INFO: Device name set to extcairo.\n");
   plinit ();
+  printf ("INFO: PLplot initialized.\n");
   pl_cmd (PLESC_DEVINIT, cr);
-  plenv (0.0, 1.0, 0.0, 1.0, 1, 0);
-  pllab ("x", "y", "title");
+  /* just = 0: the x and y axes are scaled independently to use as much of the screen as possible. */
+  plenv (xmin, xmax, ymin, ymax, 0, 0);
+  printf ("INFO: Standard window and draw box set.\n");
+  pllab (xlabel, ylabel, "Spectrum");
+  printf ("INFO: Labels set.\n");
+  plcol0 (3);  // Green
+  plline (spectrum_data->num_datarows, spectrum_data->wavelengths, spectrum_data->intensities);
   plend ();
+  printf ("INFO: Plotting session ended.\n");
 }
 
 void

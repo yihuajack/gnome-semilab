@@ -7,7 +7,6 @@ gnome_semilab_sources = [
   'gnome-semilab-global.c',
   'utils.c',
   'csv_reader.c',
-  'sqlimit.c',
 ]
 
 gnome_semilab_marshal = gnome.genmarshal('gnome-semilab-marshal',
