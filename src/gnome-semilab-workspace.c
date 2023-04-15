@@ -20,6 +20,7 @@
 
 #define G_LOG_DOMAIN "gnome-semilab-workspace"
 
+#include <stdlib.h>
 #include <glib/gi18n.h>
 #include <plplot.h>
 #include <gsl/gsl_statistics.h>
@@ -64,11 +65,11 @@ open_file_as_spectrum (GnomeSemilabWorkspace *self)
 }
 
 static void
-draw_function (GtkDrawingArea *area,
-               cairo_t        *cr,
-               int             width,
-               int             height,
-               gpointer        data)
+draw_spec_function (GtkDrawingArea *area,
+                    cairo_t        *cr,
+                    int             width,
+                    int             height,
+                    gpointer        data)
 {
   struct csv_data *spectrum_data = (struct csv_data *)data;
   const char *xlabel = spectrum_data->fields[0];
@@ -84,7 +85,7 @@ draw_function (GtkDrawingArea *area,
   printf ("INFO: PLplot initialized.\n");
   pl_cmd (PLESC_DEVINIT, cr);
   /* just = 0: the x and y axes are scaled independently to use as much of the screen as possible. */
-  plenv (xmin, xmax, ymin, ymax, 0, 0);
+  plenv (xmin, xmax, 0, ymax, 0, 0);
   printf ("INFO: Standard window and draw box set.\n");
   pllab (xlabel, ylabel, "Spectrum");
   printf ("INFO: Labels set.\n");
@@ -92,6 +93,45 @@ draw_function (GtkDrawingArea *area,
   plline (spectrum_data->num_datarows, spectrum_data->wavelengths, spectrum_data->intensities);
   plend ();
   printf ("INFO: Plotting session ended.\n");
+}
+
+static void
+csv_sketch_read (FILE          *fp,
+                 struct eff_bg *eff_bg_data,
+                 char           delim)
+{
+  eff_bg_data->bandgap = (double *)calloc (eff_bg_data->length, sizeof (double));
+  eff_bg_data->efficiency = (double *)calloc (eff_bg_data->length, sizeof (double));
+  if (delim == ' ')
+    {
+      for (size_t i = 0; i < eff_bg_data->length; i++)
+        {
+          fscanf (fp, "%lf%lf", &eff_bg_data->bandgap[i], &eff_bg_data->efficiency[i]);
+        }
+    }
+}
+
+static void
+draw_eff_bg_function (GtkDrawingArea *area,
+                      cairo_t        *cr,
+                      int             width,
+                      int             height,
+                      gpointer        data)
+{
+  struct eff_bg *eff_bg_data = (struct eff_bg *)data;
+  double xmin, xmax, ymin, ymax;
+  gsl_stats_minmax (&xmin, &xmax, eff_bg_data->bandgap, 1, eff_bg_data->length);
+  gsl_stats_minmax (&ymin, &ymax, eff_bg_data->efficiency, 1, eff_bg_data->length);
+  printf ("%lf %lf %lf %lf\n", xmin, xmax, ymin, ymax);
+
+  plsdev ("extcairo");
+  plinit ();
+  pl_cmd (PLESC_DEVINIT, cr);
+  plenv (xmin, xmax, ymin, ymax, 0, 0);
+  pllab ("Bandgap energy (eV)", "Max efficiency (%)", "Efficiency vs. Bandgap");
+  plcol0 (3);
+  plline (eff_bg_data->length, eff_bg_data->bandgap, eff_bg_data->efficiency);
+  plend ();
 }
 
 void
@@ -173,7 +213,15 @@ gnome_semilab_workspace_sim_action (GtkWidget   *widget,
                                     GVariant    *param)
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
-  open_file_as_spectrum (self);
+
+  FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen_PCE.tsv", "r");
+  self->eff_bg_data.length = 200;
+  csv_sketch_read (fp, &self->eff_bg_data, ' ');
+  fclose (fp);
+  printf ("%ld %lf %lf\n", self->eff_bg_data.length, self->eff_bg_data.bandgap[0], self->eff_bg_data.efficiency[0]);
+
+  /* sqlimit_main (self->spectrum); */
+  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->eff_bg_plot), draw_eff_bg_function, &self->eff_bg_data, NULL);
 }
 
 static void
@@ -197,7 +245,7 @@ gnome_semilab_workspace_plot_spec_action (GtkWidget   *widget,
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
   open_file_as_spectrum (self);
-  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_function, self->spectrum, NULL);
+  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_spec_function, self->spectrum, NULL);
 }
 
 static void
@@ -267,6 +315,7 @@ gnome_semilab_workspace_class_init (GnomeSemilabWorkspaceClass *klass)
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, menu_button);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, win_menu);
   gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, spectrum_plot);
+  gtk_widget_class_bind_template_child (widget_class, GnomeSemilabWorkspace, eff_bg_plot);
 
   gtk_widget_class_install_action (widget_class, "ws.import", NULL, gnome_semilab_workspace_open_action);
   gtk_widget_class_install_action (widget_class, "ws.plot-spec", NULL, gnome_semilab_workspace_plot_spec_action);

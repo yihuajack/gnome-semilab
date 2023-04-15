@@ -21,7 +21,7 @@
 #pragma once
 
 #include "gnome-semilab-workspace.h"
-#include "csv_reader.h"
+#include "sqlimit.h"
 
 G_BEGIN_DECLS
 
@@ -32,11 +32,13 @@ struct _GnomeSemilabWorkspace
   gchar                *ws_type;
   GFile                *table;
   struct csv_data      *spectrum;
+  struct eff_bg         eff_bg_data;
 
   GtkBox               *ws_main_box;
   GtkMenuButton        *menu_button;
   GtkPopoverMenu       *win_menu;
   GtkDrawingArea       *spectrum_plot;
+  GtkDrawingArea       *eff_bg_plot;
 };
 
 G_END_DECLS

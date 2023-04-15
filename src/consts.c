@@ -1,4 +1,4 @@
-/* sqlimit-test.c
+/* consts.c
  *
  * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
@@ -18,26 +18,16 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <stdlib.h>
-#include <unistd.h>
+#include "sqlimit.h"
 
-#include "../src/sqlimit.h"
-
-int
-main (int   argc,
-      char *argv[])
-{
-  /* FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen 3300K.csv", "r"); */
-  FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/astmg173.csv", "r");
-  if (!fp)
-    {
-      perror ("File opening failed\n");
-      exit (EXIT_FAILURE);
-    }
-  rewind (fp);
-  struct csv_data *spectrum = read_csv (fp);
-  sqlimit_main (spectrum);
-  fclose (fp);
-  exit (EXIT_SUCCESS);
-}
+// numericalunits.py
+// Speed of light in vacuum
+extern
+const double c0 = 299792458;  // m / s
+// Electronvolt
+extern
+const double eV = 1.602176634E-19;  // J
+// Planck constant
+extern
+const double hPlanck = 6.62607015E-34;  // J * s
 

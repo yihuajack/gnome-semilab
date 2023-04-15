@@ -20,6 +20,29 @@
 
 #include <stdio.h>
 
+#include "csv_reader.h"
+
+#ifndef SQLIMIT_H
+#define SQLIMIT_H
+
+struct eff_bg
+{
+  double *bandgap;
+  double *efficiency;
+  size_t length;
+};
+
 extern
-void sqlimit_main (FILE *fp);
+const double c0;
+
+extern
+const double eV;
+
+extern
+const double hPlanck;
+
+extern
+void sqlimit_main (struct csv_data *spectrum);
+
+#endif /* SQLIMIT_H */
 

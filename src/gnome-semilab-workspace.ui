@@ -32,6 +32,13 @@
         </child>
         <child>
           <object class="GtkDrawingArea" id="spectrum_plot">
+            <property name="visible">false</property>
+            <property name="content-width">600</property>
+            <property name="content-height">600</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkDrawingArea" id="eff_bg_plot">
             <property name="content-width">600</property>
             <property name="content-height">600</property>
           </object>
