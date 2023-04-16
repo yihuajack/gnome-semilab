@@ -28,6 +28,10 @@ main (int   argc,
       char *argv[])
 {
   /* FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen 3300K.csv", "r"); */
+  // ASTM G173-03 Reference Spectra Derived from SMARTS v2.9.2
+  // Note that the incident light intensity of the light coming from the sun and sky at at typical latitude on a clear day
+  // is the THIRD column (Global tilt W*m-2*nm-1) of the original dataset file
+  // TODO: directly read from https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls
   FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/astmg173.csv", "r");
   if (!fp)
     {

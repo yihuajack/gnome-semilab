@@ -23,6 +23,9 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_sf_exp.h>
+#include <gsl/gsl_sf_log.h>
+#include <gsl/gsl_multimin.h>
 
 #include "sqlimit.h"
 
@@ -32,22 +35,30 @@ struct spline_params
   gsl_interp_accel *acc;
 };
 
+struct min_params
+{
+  double        voltage;
+  double        Emax;
+  gsl_function *F_s;
+  gsl_function *F_RR0;
+};
+
 /* Solar Photons per unit Time, per unit photon Energy-range, and per unit Area of the solar cell
  * (assuming the cell is facing normal to the sun) */
 static double
-s_photons_per_tea (double  Ephoton, /* J */
+s_photons_per_tea (double  Ephoton,  /* J */
                    void   *params)
 {
   // convert energy to wavelength
   double lambda = hPlanck * c0 / Ephoton;  /* m */
   gsl_spline *spline = ((struct spline_params *)params)->spline;
   gsl_interp_accel *acc = ((struct spline_params *)params)->acc;
-  // https://lists.libreplanet.org/archive/html/help-gsl/2013-06/msg00013.html
-  // https://stackoverflow.com/questions/40931337/interpolation-error-with-gsl-interp-linear
-  // x >= interp->xmin && x <= interp->xmax; otherwise
-  // ERROR: interpolation error\nDefault GSL error handler invoked.
-  // The documentation does not mention, see source code of `gsl_spline.h`:
-  // gsl_spline has four members: gsl_interp *interp, double *x, double *y, and size_t size
+  /* https://lists.libreplanet.org/archive/html/help-gsl/2013-06/msg00013.html
+   * https://stackoverflow.com/questions/40931337/interpolation-error-with-gsl-interp-linear
+   * x >= interp->xmin && x <= interp->xmax; otherwise
+   * ERROR: interpolation error\nDefault GSL error handler invoked.
+   * The documentation does not mention, see source code of `gsl_spline.h`:
+   * gsl_spline has four members: gsl_interp *interp, double *x, double *y, and size_t size */
   if (lambda * 1E9 < spline->interp->xmin || lambda * 1E9 > spline->interp->xmax)
     {
       fprintf (stderr, "Error: current wavelength %.17g nm is not in the range of [%.17g nm, %.17g nm].\n", lambda * 1E9, spline->interp->xmin, spline->interp->xmax);
@@ -57,10 +68,86 @@ s_photons_per_tea (double  Ephoton, /* J */
 }
 
 static double
-power_per_tea (double  Ephoton, /* J */
+power_per_tea (double  Ephoton,  /* J */
                void   *params)
 {
   return Ephoton * s_photons_per_tea (Ephoton, params);
+}
+
+static double
+solar_photons_above_gap (double        Egap,  /* J */
+                         double        Emax,  /* J */
+                         gsl_function *F_s)
+{
+  double result, error;
+  size_t iter_lim = 50;
+  gsl_integration_workspace *s_int_ws = gsl_integration_workspace_alloc (iter_lim);
+  gsl_integration_qags (F_s, Egap, Emax, 1.49E-08, 1.49E-08, iter_lim, s_int_ws, &result, &error);
+  gsl_integration_workspace_free (s_int_ws);
+  return result;
+}
+
+static double
+RR0_integrand (double  E,  /* J */
+               void   *params)
+{
+  return E * E  / (gsl_sf_exp (E / (kB * Tcell)) - 1);
+}
+
+/* Recombination rate when electron QFL and hole QFL are split
+ * QFL: Quasi-Fermi Level  */
+static double
+RR0 (double        Egap,  /* J */
+     double        Emax,  /* J */
+     gsl_function *F_RR0)
+{
+  double integral, error;
+  size_t iter_lim = 50;
+  gsl_integration_workspace *s_int_ws = gsl_integration_workspace_alloc (iter_lim);
+  gsl_integration_qags (F_RR0, Egap, Emax, 1.49E-08, 1.49E-08, iter_lim, s_int_ws, &integral, &error);
+  gsl_integration_workspace_free (s_int_ws);
+  return 2 * M_PI / (c0 * c0 * gsl_pow_3 (hPlanck)) * integral;
+}
+
+static double
+current_density (double        voltage,  /* V */
+                 double        Egap,     /* J */
+                 double        Emax,     /* J */
+                 gsl_function *F_s,
+                 gsl_function *F_RR0)
+{
+  /* A/m^2 */
+  return eV * (solar_photons_above_gap (Egap, Emax, F_s) - RR0 (Egap, Emax, F_RR0) * gsl_sf_exp (eV * voltage / (kB * Tcell)));
+}
+
+/* Short-circuit current density */
+static double
+JSC (double        Egap,     /* J */
+     double        Emax,     /* J */
+     gsl_function *F_s,
+     gsl_function *F_RR0)
+{
+  /* A/m^2 */
+  return current_density (0, Egap, Emax, F_s, F_RR0);
+}
+
+/* Open-circuit voltage */
+static double
+VOC (double        Egap,     /* J */
+     double        Emax,     /* J */
+     gsl_function *F_s,
+     gsl_function *F_RR0)
+{
+  /* V */
+  return (kB * Tcell / eV) * gsl_sf_log (solar_photons_above_gap (Egap, Emax, F_s) / RR0 (Egap, Emax, F_RR0));
+}
+
+static double
+func_to_minimize (double  Egap,  /* J */
+                  void   *params)
+{
+  struct min_params *sql_min_params = (struct min_params *)params;
+  return -voltage * current_density (voltage, Egap, sql_min_params->Emax, sql_min_params->F_s, sql_min_params->F_RR0);
 }
 
 void
@@ -70,11 +157,11 @@ sqlimit_main (struct csv_data *spectrum)
   printf ("INFO: Interpolation lookup accelerator object allocated.\n");
   // scipy.interpolate.interp1d use `linear` by default
   const gsl_interp_type *t = gsl_interp_linear;
-  // gsl_spline workspace provides a higher level interface for the gsl_interp object
-  // The allocated size must match the initialized size; otherwise, in spline.c gsl_spline_init ()
-  // if (size != spline->size)
-  // GSL_ERROR ("data must match size of spline object", GSL_EINVAL);
-  // If the size is less than the total size of data, the data will be truncated
+  /* gsl_spline workspace provides a higher level interface for the gsl_interp object
+   * The allocated size must match the initialized size; otherwise, in spline.c gsl_spline_init ()
+   * if (size != spline->size)
+   * GSL_ERROR ("data must match size of spline object", GSL_EINVAL);
+   * If the size is less than the total size of data, the data will be truncated */
   gsl_spline *spline = gsl_spline_alloc (t, spectrum->num_datarows);
   printf ("INFO: Spline allocated of size %u.\n", spectrum->num_datarows);
   int status = gsl_spline_init (spline, spectrum->wavelengths, spectrum->intensities, spectrum->num_datarows);
@@ -84,30 +171,78 @@ sqlimit_main (struct csv_data *spectrum)
     }
   printf ("INFO: Spline initialized with error number %d.\n", status);
 
-  // Need to allocate enough size; otherwise
-  // ERROR: a maximum of one iteration was insufficient
-  gsl_integration_workspace *p_int_ws = gsl_integration_workspace_alloc (50);
+  /* Need to allocate enough size; otherwise
+   * ERROR: a maximum of one iteration was insufficient
+   * The size allocated for the workspace must be greater than or equal to the iteration limit of QAG; otherwise
+   * if (limit > workspace->limit)
+   * GSL_ERROR ("iteration limit exceeds available workspace", GSL_EINVAL) ;  */
+  const size_t iter_lim = 50;
+  gsl_integration_workspace *p_int_ws = gsl_integration_workspace_alloc (iter_lim);
 
-  double result, error;
+  double solar_constant;  // the final approximation from the extrapolation `result`
+  double error;  // an estimate of the absolute error `abserr`
   struct spline_params sql_spline_params;
   sql_spline_params.spline = spline;
   sql_spline_params.acc = acc;
 
-  gsl_function F_p, F_s;
+  gsl_function F_p, F_s, F_RR0;
   F_p.function = &power_per_tea;
   F_s.function = &s_photons_per_tea;
+  F_RR0.function = &RR0_integrand;
   F_p.params = &sql_spline_params;
   F_s.params = &sql_spline_params;
+  F_RR0.params = NULL;
 
   // No need to manually calculate xmin and xmax by gsl_statistics' gsk_stats_minmax()
   double lambda_min = spline->interp->xmin * 1E-9, lambda_max = spline->interp->xmax * 1E-9;  /* m */
   double E_min = hPlanck * c0 / lambda_max, E_max = hPlanck * c0 / lambda_min;  /* J */
   printf ("INFO: λ_min = %lf nm, λ_max = %lf nm, E_min = %lf eV, E_max = %lf eV.\n", spline->interp->xmin , spline->interp->xmax, E_min / eV, E_max / eV);
-  printf ("EXAMPLE: %.17g\n", s_photons_per_tea (2 * eV, F_s.params) * 1E-3 * eV);
+  printf ("INFO: s_photons_per_tea 2 eV EXAMPLE %.17g\n", s_photons_per_tea (2 * eV, F_s.params) * 1E-3 * eV);
 
-  // epsabs, epsrel, and limit keep same as scipy.integrate.quad
-  const double solar_constant = gsl_integration_qag (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, 50, GSL_INTEG_GAUSS61, p_int_ws, &result, &error);
-  printf ("Calculated solar constant is %.17g\n.", solar_constant);
+  struct min_params sql_min_params;
+  sql_min_params.Emax = E_max;
+  sql_min_params.F_s = &F_s;
+  sql_min_params.F_RR0 = &F_RR0;
+
+  /* epsabs, epsrel, and limit=50 keep same as scipy.integrate.quad (full_output=0 to show full output)
+   * points=None, weight=None; no infinite bounds => QUADPACK routine is qagse
+   * (globally adaptive interval subdivision in connection with extrapolation)
+   * By testing, qags gives smaller error than qag with GSL_INTEG_GAUSS61
+   * IntegrationWarning: The maximum number of subdivisions (50) has been achieved.
+   * If increasing the limit yields no improvement it is advised to analyze
+   * the integrand in order to determine the difficulties.  If the position of a
+   * local difficulty can be determined (singularity, discontinuity) one will
+   * probably gain from splitting up the interval and calling the integrator
+   * on the subranges.  Perhaps a special-purpose integrator should be used.
+   * If setting limit to 1000, there would be error
+   * ERROR: roundoff error prevents tolerance from being achieved
+   * because the absolute and relative tolerances are too stringent.
+   * If setting limit to 50, there would be error
+   * else if (iteration == limit)
+   * GSL_ERROR ("maximum number of subdivisions reached", GSL_EMAXITER);
+   * error code is GSL_EMAXITER = 11
+   * exceeded max number of iterations
+   * Thus, we have to "pass" the error  */
+  gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
+  int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &solar_constant, &error);
+  printf ("INFO: (Error code %d) Calculated solar constant is %lf with error %lf.\n", err_code, solar_constant, error);
+  printf ("INFO: solar_photons_above_gap EXAMPLE %lf\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
+  printf ("INFO: JSC 1.1eV EXAMPLE %lf A/m^2\n", JSC (1.1 * eV, E_max, &F_s, &F_RR0));
+  printf ("INFO: VOC 1.1eV EXAMPLE %lf V\n", VOC (1.1 * eV, E_max, &F_s, &F_RR0));
+
+  /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
+   * gsl_multimin_fminizer_nmsimplex and gsl_multimin_fminimizer_nmsimplex2 are both of O(N^2) memory usage
+   * but gsl_multimin_fminimizer_nmsimplex2 is O(N) operations while gsl_multimin_fminimizer_nmsimplex is O(N^2) operations */
+  const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
+  const gsl_multimin_fminimizer *s = NULL;
+  gsl_multimin_function min_func;
+
+  min_func.n = 1;  // Number of function components
+  min_func.f = &func_to_minimize;
+  min_func.params = &sql_min_params;
+
+  // Restore the default error handler
+  gsl_set_error_handler (default_handler);
 
   gsl_spline_free (spline);
   gsl_interp_accel_free (acc);

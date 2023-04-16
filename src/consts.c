@@ -22,12 +22,17 @@
 
 // numericalunits.py
 // Speed of light in vacuum
-extern
+// warning: c0 initialized and declared 'extern'
 const double c0 = 299792458;  // m / s
+
 // Electronvolt
-extern
 const double eV = 1.602176634E-19;  // J
+
 // Planck constant
-extern
 const double hPlanck = 6.62607015E-34;  // J * s
+
+const double Tcell = 300;  // K
+
+// Boltzmann constant
+const double kB = 1.380649E-23;  // J / K
 

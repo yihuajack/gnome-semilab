@@ -29,7 +29,7 @@ struct eff_bg
 {
   double *bandgap;
   double *efficiency;
-  size_t length;
+  size_t  length;
 };
 
 extern
@@ -42,7 +42,13 @@ extern
 const double hPlanck;
 
 extern
+const double Tcell;
+
+extern
+const double kB;
+
+extern
 void sqlimit_main (struct csv_data *spectrum);
 
-#endif /* SQLIMIT_H */
+#endif  /* SQLIMIT_H */
 
