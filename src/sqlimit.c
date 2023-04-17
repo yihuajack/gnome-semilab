@@ -26,6 +26,7 @@
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_log.h>
 #include <gsl/gsl_multimin.h>
+#include <time.h>
 
 #include "sqlimit.h"
 
@@ -37,7 +38,7 @@ struct spline_params
 
 struct min_params
 {
-  double        voltage;
+  double        Egap;
   double        Emax;
   gsl_function *F_s;
   gsl_function *F_RR0;
@@ -84,6 +85,7 @@ solar_photons_above_gap (double        Egap,  /* J */
   gsl_integration_workspace *s_int_ws = gsl_integration_workspace_alloc (iter_lim);
   gsl_integration_qags (F_s, Egap, Emax, 1.49E-08, 1.49E-08, iter_lim, s_int_ws, &result, &error);
   gsl_integration_workspace_free (s_int_ws);
+  /* (m^2 s)^(-1) */
   return result;
 }
 
@@ -106,53 +108,131 @@ RR0 (double        Egap,  /* J */
   gsl_integration_workspace *s_int_ws = gsl_integration_workspace_alloc (iter_lim);
   gsl_integration_qags (F_RR0, Egap, Emax, 1.49E-08, 1.49E-08, iter_lim, s_int_ws, &integral, &error);
   gsl_integration_workspace_free (s_int_ws);
+  /* (m^2 s)^(-1) */
   return 2 * M_PI / (c0 * c0 * gsl_pow_3 (hPlanck)) * integral;
 }
 
 static double
-current_density (double        voltage,  /* V */
-                 double        Egap,     /* J */
-                 double        Emax,     /* J */
-                 gsl_function *F_s,
-                 gsl_function *F_RR0)
+current_density (double             voltage,  /* V */
+                 struct min_params *params)
 {
   /* A/m^2 */
-  return eV * (solar_photons_above_gap (Egap, Emax, F_s) - RR0 (Egap, Emax, F_RR0) * gsl_sf_exp (eV * voltage / (kB * Tcell)));
+  return eV * (solar_photons_above_gap (params->Egap, params->Emax, params->F_s) - RR0 (params->Egap, params->Emax, params->F_RR0) * gsl_sf_exp (eV * voltage / (kB * Tcell)));
 }
 
 /* Short-circuit current density */
 static double
-JSC (double        Egap,     /* J */
-     double        Emax,     /* J */
-     gsl_function *F_s,
-     gsl_function *F_RR0)
+JSC (struct min_params *params)
 {
   /* A/m^2 */
-  return current_density (0, Egap, Emax, F_s, F_RR0);
+  return current_density (0, params);
 }
 
 /* Open-circuit voltage */
 static double
-VOC (double        Egap,     /* J */
-     double        Emax,     /* J */
-     gsl_function *F_s,
-     gsl_function *F_RR0)
+VOC (struct min_params *params)
 {
   /* V */
-  return (kB * Tcell / eV) * gsl_sf_log (solar_photons_above_gap (Egap, Emax, F_s) / RR0 (Egap, Emax, F_RR0));
+  return (kB * Tcell / eV) * gsl_sf_log (solar_photons_above_gap (params->Egap, params->Emax, params->F_s) / RR0 (params->Egap, params->Emax, params->F_RR0));
 }
 
 static double
-func_to_minimize (double  Egap,  /* J */
-                  void   *params)
+func_to_minimize (const gsl_vector *v,
+                  void             *params)
 {
-  struct min_params *sql_min_params = (struct min_params *)params;
-  return -voltage * current_density (voltage, Egap, sql_min_params->Emax, sql_min_params->F_s, sql_min_params->F_RR0);
+  double voltage = gsl_vector_get (v, 0);
+  return -voltage * current_density (voltage, (struct min_params *)params);
 }
 
-void
+static double
+V_mpp (gsl_multimin_function *min_func)
+{
+  const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
+  gsl_multimin_fminimizer *s = NULL;
+  gsl_vector *ss /* step size */, *x;
+  double retval;
+
+  size_t iter = 0;
+  int status;
+  double size;
+
+  x = gsl_vector_alloc (1);
+  // Compare to initial guess x0 = 0
+  gsl_vector_set (x, 0, 0);
+
+  ss = gsl_vector_alloc (1);
+  // Initial step size step_size = 1.0
+  gsl_vector_set (ss, 0, 1.0);
+
+  s = gsl_multimin_fminimizer_alloc (T, 1);
+  gsl_multimin_fminimizer_set (s, min_func, x, ss);
+
+  do
+    {
+      iter++;
+      status = gsl_multimin_fminimizer_iterate (s);
+
+      if (status)
+        break;
+
+      size = gsl_multimin_fminimizer_size (s);
+      // Compare to absolute error in xopt between iterations that is acceptable for convergence xtol = 0.0001
+      // Compare to absolute error in func(xopt) between iterations that is acceptable for convergence ftol = 0.0001
+      status = gsl_multimin_test_size (size, 1E-3);
+
+      if (status == GSL_SUCCESS)
+        {
+          retval = gsl_vector_get (s->x, 0);
+          /* printf ("converged to minimum at iter=%lu V=%lf P=%lf size=%lf\n", iter, retval, -s->fval, size); */
+        }
+    }
+  // Compare to maximum number of iterations to perform maxiter = None
+  while (status == GSL_CONTINUE /* && iter < 100 */);
+
+  gsl_vector_free (x);
+  gsl_multimin_fminimizer_free (s);
+
+  return retval;
+}
+
+static double
+J_mpp (gsl_multimin_function *min_func)
+{
+  return current_density (V_mpp (min_func), min_func->params);
+}
+
+static double
+max_power (gsl_multimin_function *min_func)
+{
+  const double voltage = V_mpp (min_func);
+  return voltage * current_density (voltage, min_func->params);
+}
+
+static double
+max_efficiency (double                 solar_constant,
+                gsl_multimin_function *min_func)
+{
+  return max_power (min_func) / solar_constant;
+}
+
+double *linspace (double start,
+                  double stop,
+                  size_t num)
+{
+  double *arr = (double *)calloc (num, sizeof (double));
+  double step = (stop - start) / (num - 1);
+  for (size_t i = 0; i < num; i++)
+    {
+      arr[i] = start + i * step;
+    }
+  return arr;
+}
+
+struct eff_bg
 sqlimit_main (struct csv_data *spectrum)
 {
+  struct eff_bg eff_bg_data;
+
   gsl_interp_accel *acc = gsl_interp_accel_alloc ();
   printf ("INFO: Interpolation lookup accelerator object allocated.\n");
   // scipy.interpolate.interp1d use `linear` by default
@@ -226,20 +306,40 @@ sqlimit_main (struct csv_data *spectrum)
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &solar_constant, &error);
   printf ("INFO: (Error code %d) Calculated solar constant is %lf with error %lf.\n", err_code, solar_constant, error);
-  printf ("INFO: solar_photons_above_gap EXAMPLE %lf\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
-  printf ("INFO: JSC 1.1eV EXAMPLE %lf A/m^2\n", JSC (1.1 * eV, E_max, &F_s, &F_RR0));
-  printf ("INFO: VOC 1.1eV EXAMPLE %lf V\n", VOC (1.1 * eV, E_max, &F_s, &F_RR0));
+  printf ("INFO: solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
    * gsl_multimin_fminizer_nmsimplex and gsl_multimin_fminimizer_nmsimplex2 are both of O(N^2) memory usage
    * but gsl_multimin_fminimizer_nmsimplex2 is O(N) operations while gsl_multimin_fminimizer_nmsimplex is O(N^2) operations */
-  const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
-  const gsl_multimin_fminimizer *s = NULL;
   gsl_multimin_function min_func;
 
   min_func.n = 1;  // Number of function components
   min_func.f = &func_to_minimize;
+  sql_min_params.Egap = 1.1 * eV;
   min_func.params = &sql_min_params;
+
+  printf ("INFO: RR0 1.1 eV EXAMPLE %lf /(m^2 s)\n", RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
+  printf ("INFO: JSC 1.1 eV EXAMPLE %lf A/m^2\n", JSC (&sql_min_params));
+  printf ("INFO: VOC 1.1 eV EXAMPLE %lf V\n", VOC (&sql_min_params));
+  printf ("INFO: V_mpp 1.1 eV EXAMPLE %lf V\n", V_mpp (&min_func));
+  printf ("INFO: max_efficiency 1.1 eV EXAMPLE %lf V\n", max_efficiency (solar_constant, &min_func));
+
+  eff_bg_data.length = 100;
+  eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
+  eff_bg_data.efficiency = (double *)calloc (eff_bg_data.length, sizeof (double));
+
+  clock_t timer;
+  timer = clock ();
+  for (size_t i = 0; i < eff_bg_data.length; i++)
+    {
+      sql_min_params.Egap = eff_bg_data.bandgap[i];
+      min_func.params = &sql_min_params;
+      eff_bg_data.efficiency[i] = max_efficiency (solar_constant, &min_func);
+    }
+  timer = clock () - timer;
+  printf ("Time cost: %lf s\n", ((double) timer) / CLOCKS_PER_SEC);
+  gsl_vector_view eff_list = gsl_vector_view_array (eff_bg_data.efficiency, eff_bg_data.length);
+  printf ("Max efficiency %lf %% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
 
   // Restore the default error handler
   gsl_set_error_handler (default_handler);
@@ -247,5 +347,7 @@ sqlimit_main (struct csv_data *spectrum)
   gsl_spline_free (spline);
   gsl_interp_accel_free (acc);
   gsl_integration_workspace_free (p_int_ws);
+
+  return eff_bg_data;
 }
 

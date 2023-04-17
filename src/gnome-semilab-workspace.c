@@ -122,12 +122,11 @@ draw_eff_bg_function (GtkDrawingArea *area,
   double xmin, xmax, ymin, ymax;
   gsl_stats_minmax (&xmin, &xmax, eff_bg_data->bandgap, 1, eff_bg_data->length);
   gsl_stats_minmax (&ymin, &ymax, eff_bg_data->efficiency, 1, eff_bg_data->length);
-  printf ("%lf %lf %lf %lf\n", xmin, xmax, ymin, ymax);
 
   plsdev ("extcairo");
   plinit ();
   pl_cmd (PLESC_DEVINIT, cr);
-  plenv (xmin, xmax, ymin, ymax, 0, 0);
+  plenv (xmin, xmax, 0, ymax, 0, 0);
   pllab ("Bandgap energy (eV)", "Max efficiency (%)", "Efficiency vs. Bandgap");
   plcol0 (3);
   plline (eff_bg_data->length, eff_bg_data->bandgap, eff_bg_data->efficiency);
@@ -213,14 +212,16 @@ gnome_semilab_workspace_sim_action (GtkWidget   *widget,
                                     GVariant    *param)
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
+  open_file_as_spectrum (self);
+  g_assert (self->spectrum != NULL);
 
-  FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen_PCE.tsv", "r");
-  self->eff_bg_data.length = 200;
-  csv_sketch_read (fp, &self->eff_bg_data, ' ');
-  fclose (fp);
-  printf ("%ld %lf %lf\n", self->eff_bg_data.length, self->eff_bg_data.bandgap[0], self->eff_bg_data.efficiency[0]);
+  /* FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen_PCE.tsv", "r");
+   * self->eff_bg_data.length = 200;
+   * csv_sketch_read (fp, &self->eff_bg_data, ' ');
+   * fclose (fp);  */
 
-  /* sqlimit_main (self->spectrum); */
+  self->eff_bg_data = sqlimit_main (self->spectrum);
+
   gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->eff_bg_plot), draw_eff_bg_function, &self->eff_bg_data, NULL);
 }
 
