@@ -133,6 +133,28 @@ draw_eff_bg_function (GtkDrawingArea *area,
   plend ();
 }
 
+static void
+draw_ff_function (GtkDrawingArea *area,
+                  cairo_t        *cr,
+                  int             width,
+                  int             height,
+                  gpointer        data)
+{
+  struct eff_bg *eff_bg_data = (struct eff_bg *)data;
+  double xmin, xmax, ymin, ymax;
+  gsl_stats_minmax (&xmin, &xmax, eff_bg_data->bandgap, 1, eff_bg_data->length);
+  gsl_stats_minmax (&ymin, &ymax, eff_bg_data->fill_factor, 1, eff_bg_data->length);
+
+  plsdev ("extcairo");
+  plinit ();
+  pl_cmd (PLESC_DEVINIT, cr);
+  plenv (xmin, xmax, 0, ymax, 0, 0);
+  pllab ("Bandgap energy (eV)", "Ideal fill factor", "Ideal fill factor vs. Bandgap");
+  plcol0 (3);
+  plline (eff_bg_data->length, eff_bg_data->bandgap, eff_bg_data->fill_factor);
+  plend ();
+}
+
 void
 gnome_semilab_workspace_activate (GnomeSemilabWorkspace *workspace)
 {

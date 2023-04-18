@@ -29,7 +29,7 @@ struct eff_bg
 {
   double *bandgap;
   double *efficiency;
-  // double *fill_factor;
+  double *fill_factor;
   size_t  length;
 };
 
@@ -43,10 +43,16 @@ extern
 const double hPlanck;
 
 extern
+const double hbar;
+
+extern
 const double Tcell;
 
 extern
 const double kB;
+
+extern
+const double sigma_SB;
 
 extern
 double        *linspace (double start,

@@ -19,6 +19,7 @@
  */
 
 #include "sqlimit.h"
+#include "math.h"
 
 // numericalunits.py
 // Speed of light in vacuum
@@ -31,8 +32,17 @@ const double eV = 1.602176634E-19;  // J
 // Planck constant
 const double hPlanck = 6.62607015E-34;  // J * s
 
+// Reduced Planck constant
+// hbar = h / (2 * pi)
+const double hbar = hPlanck / (2 * M_PI);
+
 const double Tcell = 300;  // K
 
 // Boltzmann constant
 const double kB = 1.380649E-23;  // J / K
+
+// Stefan–Boltzmann constant
+// sigma_SB = (2 * pi^5 * k^4) / (15 * c^2 * h^3) = (pi^2 * kB^4) / (60 * hbar^3 * c0^2);
+// Initializer element must be a compile-time constant
+const double sigma_SB = (M_PI * M_PI * kB * kB * kB * kB) / (60 * hbar * hbar * hbar * c0 * c0);  // W / (m^2 * K^4)
 

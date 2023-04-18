@@ -69,6 +69,15 @@ s_photons_per_tea (double  Ephoton,  /* J */
 }
 
 static double
+interp_eval (double  lambda,  /* m */
+             void   *params)
+{
+  gsl_spline *spline = ((struct spline_params *)params)->spline;
+  gsl_interp_accel *acc = ((struct spline_params *)params)->acc;
+  return gsl_spline_eval (spline, lambda * 1E9, acc) * 1E9;
+}
+
+static double
 power_per_tea (double  Ephoton,  /* J */
                void   *params)
 {
@@ -215,6 +224,83 @@ max_efficiency (double                 solar_constant,
   return max_power (min_func) / solar_constant;
 }
 
+static double
+fill_factor (gsl_multimin_function *min_func)
+{
+  return max_power (min_func) / (JSC (min_func->params) * VOC (min_func->params));
+}
+
+static double
+absorbed_power (double                     absorption_edge,  /* m */
+                double                     lambda_min,       /* m */
+                double                     lambda_max,       /* m */
+                double                     solar_constant,   /* W/m^2 */
+                struct spline_params      *params,
+                gsl_integration_workspace *int_ws)
+{
+  gsl_function F_interp;
+  F_interp.function = &interp_eval;
+  F_interp.params = params;
+
+  if (absorption_edge > lambda_max)
+    {
+      return solar_constant;
+    }
+  else
+    {
+      double result, error;
+      const double iter_lim = 50;
+      gsl_integration_qags (&F_interp, lambda_min, absorption_edge, 1.49E-08, 1.49E-08, iter_lim, int_ws, &result, &error);
+      return result;
+    }
+}
+
+static double
+rad_integrand (double  lambda,  /* m */
+               void   *params)
+{
+  double *temperature = (double *)params;
+  double E_over_kT = hPlanck * c0 / (lambda * kB * *temperature);
+  return (E_over_kT < 20) ? 1 / (gsl_pow_5 (lambda) * (gsl_sf_exp (E_over_kT) - 1)) : 0;
+}
+
+static double
+emitted_radiation (double                     temperature,  /* T */
+                   double                     absorption_edge,  /* m */
+                   gsl_integration_workspace *int_ws)
+{
+  gsl_function F_rad;
+  F_rad.function = &rad_integrand;
+  F_rad.params = &temperature;
+  double result, error;
+  const double iter_lim = 50;
+
+  gsl_integration_qags (&F_rad, 5E-8 /* m */, absorption_edge, 1.49E-08, 1.49E-08, iter_lim, int_ws, &result, &error);
+
+  return 2 * M_PI * hPlanck * c0 * c0 * result;
+}
+
+static double
+power_generation (double                     T_hot,            /* K */
+                  double                     absorption_edge,  /* m */
+                  unsigned int               concentration,
+                  double                     lambda_min,       /* m */
+                  double                     lambda_max,       /* m */
+                  double                     solar_constant,   /* W/m^2 */
+                  struct spline_params      *params,
+                  gsl_integration_workspace *int_ws)
+{
+  const double T_ambient = 300 /* K */;
+  if (T_hot < T_ambient)
+    return 0;
+
+  const double hot_side_absorption = absorbed_power (absorption_edge, lambda_min, lambda_max, solar_constant, params, int_ws);
+  const double hot_side_emission = emitted_radiation (T_hot, absorption_edge, int_ws);
+  const double hot_side_net_absorption = hot_side_absorption - hot_side_emission;
+  const double carnot_efficiency = 1 - T_ambient / T_hot;
+  return (hot_side_net_absorption > 0) ? hot_side_net_absorption * carnot_efficiency : 0;
+}
+
 double *linspace (double start,
                   double stop,
                   size_t num)
@@ -305,7 +391,7 @@ sqlimit_main (struct csv_data *spectrum)
    * Thus, we have to "pass" the error  */
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &solar_constant, &error);
-  printf ("INFO: (Error code %d) Calculated solar constant is %lf with error %lf.\n", err_code, solar_constant, error);
+  printf ("INFO: (Error code %d) Calculated solar constant is %lf W/m^2 with error %lf.\n", err_code, solar_constant, error);
   printf ("INFO: solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
@@ -323,6 +409,7 @@ sqlimit_main (struct csv_data *spectrum)
   printf ("INFO: VOC 1.1 eV EXAMPLE %lf V\n", VOC (&sql_min_params));
   printf ("INFO: V_mpp 1.1 eV EXAMPLE %lf V\n", V_mpp (&min_func));
   printf ("INFO: max_efficiency 1.1 eV EXAMPLE %lf V\n", max_efficiency (solar_constant, &min_func));
+  printf ("INFO: fill_factor 1.1 eV EXAMPLE %lf\n", fill_factor (&min_func));
 
   eff_bg_data.length = 100;
   eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
@@ -339,7 +426,18 @@ sqlimit_main (struct csv_data *spectrum)
   timer = clock () - timer;
   printf ("Time cost: %lf s\n", ((double) timer) / CLOCKS_PER_SEC);
   gsl_vector_view eff_list = gsl_vector_view_array (eff_bg_data.efficiency, eff_bg_data.length);
-  printf ("Max efficiency %lf %% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
+  printf ("Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
+
+  eff_bg_data.fill_factor = (double *)calloc (eff_bg_data.length, sizeof (double));
+  for (size_t i = 0; i < eff_bg_data.length; i++)
+    {
+      sql_min_params.Egap = eff_bg_data.bandgap[i];
+      min_func.params = &sql_min_params;
+      eff_bg_data.fill_factor[i] = fill_factor (&min_func);
+    }
+
+  printf ("INFO: absorbed_power 1000 nm EXAMPLE %lf\n", absorbed_power (1E-6, lambda_min, lambda_max, solar_constant, &sql_spline_params, p_int_ws));
+  printf ("INFO: check Stefan–Boltzmann law (should equal 1): %lf\n", sigma_SB * gsl_pow_4 (345 /* K */) / emitted_radiation (345 /*K*/, 8E-5 /* m */, p_int_ws));
 
   // Restore the default error handler
   gsl_set_error_handler (default_handler);
