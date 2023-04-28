@@ -148,7 +148,7 @@ add_fields (void   *data,
   if (head->size + 1 >= head->buffer_size)
     {
       head->buffer_size = head->buffer_size ? 2 * head->buffer_size : 512;
-      head->fields = (char **) realloc (head->fields, sizeof (char *)*head->buffer_size);
+      head->fields = (char **)realloc (head->fields, sizeof (char *)*head->buffer_size);
     }
   head->fields[head->size++] = strdup (data ? (char *)data : "");
 }
@@ -306,8 +306,11 @@ cb2_double_double (int   c,
     }
 }
 
-struct csv_data *
-read_csv (FILE *fp)
+void *
+read_csv (FILE         *fp,
+          bool          with_header,
+          bool          axis,
+          unsigned int  dim)
 {
   const unsigned int buf_size = 4096;
   char buf[4096];
@@ -315,14 +318,17 @@ read_csv (FILE *fp)
   int dummy;
   struct csv_parser p;
   struct csv_body_double_double body = {0};
-  struct csv_data *result;
+  void *result;
   size_t bytes_read;
 
-  fields = read_csv_fields (fp, &dummy);
-  if (!fields)
+  if (with_header && dim == 1)
     {
-      fprintf (stderr, "ERROR: Failed to read csv fields.\n");
-      return NULL;
+      fields = read_csv_fields (fp, &dummy);
+      if (!fields)
+        {
+          fprintf (stderr, "ERROR: Failed to read csv fields.\n");
+          return NULL;
+        }
     }
 
   if (csv_init(&p, CSV_STRICT | CSV_REPALL_NL | CSV_STRICT_FINI | CSV_APPEND_NULL | CSV_EMPTY_IS_NULL) != 0)
@@ -356,28 +362,62 @@ read_csv (FILE *fp)
       fprintf (stderr, "ERROR: csv_body error\n");
       return NULL;
     }
-  result = (struct csv_data *)malloc (sizeof (struct csv_data));
+  if (dim == 1)
+    {
+      result = (struct csv_data *)malloc (sizeof (struct csv_data));
+    }
+  else if (dim == 2)
+    {
+      result = (struct csv_data_2d *)malloc (sizeof (struct csv_data_2d));
+    }
+  else
+    {
+      fprintf (stderr, "Dimension is not 1 or 2.\n");
+      return NULL;
+    }
   if (!result)
     {
       fprintf (stderr, "ERROR: malloc csv_data failed.\n");
       return NULL;
     }
-  result->fields = fields;
-  result->num_fields = body.num_cols;
-  result->num_datarows = body.size / body.num_cols;
   double *data = body.data;
-#ifdef UINT_DOUBLE_DATA
-  result->wavelengths = body.wavelengths;
-  result->intensities = body.intensities;
-#else
-  matrix_transpose (data, result->num_fields, result->num_datarows);
-  // https://stackoverflow.com/questions/5850000/how-to-split-array-into-two-arrays-in-c
-  // Use calloc() to initialize all bytes in the allocated storage to zero
-  result->wavelengths = (double *)calloc (body.buffer_size, sizeof (double));
-  result->intensities = (double *)calloc (body.buffer_size, sizeof (double));
-  memcpy (result->wavelengths, data, result->num_datarows * sizeof (double));
-  memcpy (result->intensities, data + result->num_datarows, result->num_datarows * sizeof (double));
-#endif
+  if (dim == 1)
+    {
+      struct csv_data *data_1d = (struct csv_data *)result;
+      if (with_header)
+        {
+          data_1d->fields = fields;
+        }
+      data_1d->num_fields = body.num_cols;
+      data_1d->num_datarows = body.size / body.num_cols;
+      if (axis == VERTICAL)  // vertical
+        {
+          matrix_transpose (data, data_1d->num_fields, data_1d->num_datarows);
+          // https://stackoverflow.com/questions/5850000/how-to-split-array-into-two-arrays-in-c
+          // Use calloc() to initialize all bytes in the allocated storage to zero
+          data_1d->wavelengths = (double *)calloc (body.buffer_size, sizeof (double));
+          data_1d->intensities = (double *)calloc (body.buffer_size, sizeof (double));
+          memcpy (data_1d->wavelengths, data, data_1d->num_datarows * sizeof (double));
+          memcpy (data_1d->intensities, data + data_1d->num_datarows, data_1d->num_datarows * sizeof (double));
+        }
+    }
+  else if (dim == 2)
+    {
+      struct csv_data_2d *data_2d = (struct csv_data_2d *)result;
+      data_2d->num_fields = body.num_cols;
+      data_2d->num_datarows = body.num_rows - 1;  // excluding the wavelength row
+      if (axis == HORIZONTAL)  // horizontal
+        {
+          data_2d->wavelengths = (double *)calloc (data_2d->num_fields, sizeof (double));
+          data_2d->intensities = (double **)calloc (data_2d->num_datarows, sizeof (double *));
+          memcpy (data_2d->wavelengths, data, data_2d->num_fields * sizeof (double));
+          for (unsigned int i = 0; i < data_2d->num_datarows; i++)
+            {
+              data_2d->intensities[i] = (double *)calloc (data_2d->num_fields, sizeof (double));
+              memcpy (data_2d->intensities[i], data + data_2d->num_fields, data_2d->num_fields * sizeof (double));
+            }
+        }
+    }
   return result;
 }
 

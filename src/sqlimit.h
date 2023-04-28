@@ -25,12 +25,41 @@
 #ifndef SQLIMIT_H
 #define SQLIMIT_H
 
+#ifdef DEBUG
+#define DEBUG_PRINT(fmt, ...) printf("INFO: " fmt, __VA_ARGS__)
+#else
+#define DEBUG_PRINT(fmt, ...) do {} while (0)
+#endif
+
+enum eff_bg_types
+{
+  EFF_BG_1D,
+  EFF_BG_2D
+};
+
 struct eff_bg
 {
   double *bandgap;
   double *efficiency;
   double *fill_factor;
   size_t  length;
+};
+
+struct eff_bg_2d
+{
+  double  *bandgap;
+  double **efficiency;
+  size_t   length;
+};
+
+struct var_eff_bg
+{
+  enum eff_bg_types type;
+  union
+    {
+      struct eff_bg    data_1d;
+      struct eff_bg_2d data_2d;
+    } value;
 };
 
 extern
@@ -55,12 +84,17 @@ extern
 const double sigma_SB;
 
 extern
-double        *linspace (double start,
-                         double stop,
-                         size_t num);
+double           *linspace        (double start,
+                                   double stop,
+                                   size_t num);
 
 extern
-struct eff_bg  sqlimit_main (struct csv_data *spectrum);
+struct eff_bg     sqlimit_main    (void *spectrum,
+                                   bool  axis);
+
+extern
+struct eff_bg_2d  sqlimit_main_2d (void *spectrum,
+                                   bool  axis);
 
 #endif  /* SQLIMIT_H */
 

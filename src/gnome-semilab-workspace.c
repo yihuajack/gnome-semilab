@@ -48,7 +48,7 @@ open_file_as_spectrum (GnomeSemilabWorkspace *self)
       FILE *fp = fopen (path, "r");
       if (fp)
         {
-          self->spectrum = read_csv (fp);
+          self->spectrum = read_csv (fp, true, true, 1);
           printf ("INFO: Read spectrum CSV data file %s\n", path);
           fclose (fp);
         }

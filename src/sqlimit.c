@@ -218,10 +218,10 @@ max_power (gsl_multimin_function *min_func)
 }
 
 static double
-max_efficiency (double                 solar_constant,
+max_efficiency (double                 radiation,
                 gsl_multimin_function *min_func)
 {
-  return max_power (min_func) / solar_constant;
+  return max_power (min_func) / radiation;
 }
 
 static double
@@ -234,7 +234,7 @@ static double
 absorbed_power (double                     absorption_edge,  /* m */
                 double                     lambda_min,       /* m */
                 double                     lambda_max,       /* m */
-                double                     solar_constant,   /* W/m^2 */
+                double                     radiation,   /* W/m^2 */
                 struct spline_params      *params,
                 gsl_integration_workspace *int_ws)
 {
@@ -244,7 +244,7 @@ absorbed_power (double                     absorption_edge,  /* m */
 
   if (absorption_edge > lambda_max)
     {
-      return solar_constant;
+      return radiation;
     }
   else
     {
@@ -286,7 +286,7 @@ power_generation (double                     T_hot,            /* K */
                   unsigned int               concentration,
                   double                     lambda_min,       /* m */
                   double                     lambda_max,       /* m */
-                  double                     solar_constant,   /* W/m^2 */
+                  double                     radiation,   /* W/m^2 */
                   struct spline_params      *params,
                   gsl_integration_workspace *int_ws)
 {
@@ -294,7 +294,7 @@ power_generation (double                     T_hot,            /* K */
   if (T_hot < T_ambient)
     return 0;
 
-  const double hot_side_absorption = absorbed_power (absorption_edge, lambda_min, lambda_max, solar_constant, params, int_ws);
+  const double hot_side_absorption = absorbed_power (absorption_edge, lambda_min, lambda_max, radiation, params, int_ws);
   const double hot_side_emission = emitted_radiation (T_hot, absorption_edge, int_ws);
   const double hot_side_net_absorption = hot_side_absorption - hot_side_emission;
   const double carnot_efficiency = 1 - T_ambient / T_hot;
@@ -315,12 +315,13 @@ double *linspace (double start,
 }
 
 struct eff_bg
-sqlimit_main (struct csv_data *spectrum)
+sqlimit_main (void *spectrum,
+              bool  axis)
 {
   struct eff_bg eff_bg_data;
 
   gsl_interp_accel *acc = gsl_interp_accel_alloc ();
-  printf ("INFO: Interpolation lookup accelerator object allocated.\n");
+  DEBUG_PRINT ("Interpolation lookup accelerator object allocated.\n");
   // scipy.interpolate.interp1d use `linear` by default
   const gsl_interp_type *t = gsl_interp_linear;
   /* gsl_spline workspace provides a higher level interface for the gsl_interp object
@@ -328,14 +329,24 @@ sqlimit_main (struct csv_data *spectrum)
    * if (size != spline->size)
    * GSL_ERROR ("data must match size of spline object", GSL_EINVAL);
    * If the size is less than the total size of data, the data will be truncated */
-  gsl_spline *spline = gsl_spline_alloc (t, spectrum->num_datarows);
-  printf ("INFO: Spline allocated of size %u.\n", spectrum->num_datarows);
-  int status = gsl_spline_init (spline, spectrum->wavelengths, spectrum->intensities, spectrum->num_datarows);
-  if (status)
+  int spline_status;
+  struct csv_data *spectrum_1d = (struct csv_data *)spectrum;
+  gsl_spline *spline = gsl_spline_alloc (t, spectrum_1d->num_datarows);
+  DEBUG_PRINT ("Spline allocated of size %u.\n", spectrum_1d->num_datarows);
+  if (axis == VERTICAL)  // vertical
     {
-      fprintf (stderr, "ERROR: %s\n",  gsl_strerror (status));
+      spline_status = gsl_spline_init (spline, spectrum_1d->wavelengths, spectrum_1d->intensities, spectrum_1d->num_datarows);
     }
-  printf ("INFO: Spline initialized with error number %d.\n", status);
+  else
+    {
+      fprintf (stderr, "Axis = 0, Dim = 1 is not implemented.\n");
+      return eff_bg_data;
+    }
+  if (spline_status)
+    {
+      fprintf (stderr, "ERROR: %s\n",  gsl_strerror (spline_status));
+    }
+  DEBUG_PRINT ("Spline initialized with error number %d.\n", status);
 
   /* Need to allocate enough size; otherwise
    * ERROR: a maximum of one iteration was insufficient
@@ -345,7 +356,8 @@ sqlimit_main (struct csv_data *spectrum)
   const size_t iter_lim = 50;
   gsl_integration_workspace *p_int_ws = gsl_integration_workspace_alloc (iter_lim);
 
-  double solar_constant;  // the final approximation from the extrapolation `result`
+  // For the solar spectrum, the radiation is the solar constant approximately equal to 100 W/m^2
+  double radiation;  // the final approximation from the extrapolation `result`
   double error;  // an estimate of the absolute error `abserr`
   struct spline_params sql_spline_params;
   sql_spline_params.spline = spline;
@@ -362,8 +374,8 @@ sqlimit_main (struct csv_data *spectrum)
   // No need to manually calculate xmin and xmax by gsl_statistics' gsk_stats_minmax()
   double lambda_min = spline->interp->xmin * 1E-9, lambda_max = spline->interp->xmax * 1E-9;  /* m */
   double E_min = hPlanck * c0 / lambda_max, E_max = hPlanck * c0 / lambda_min;  /* J */
-  printf ("INFO: λ_min = %lf nm, λ_max = %lf nm, E_min = %lf eV, E_max = %lf eV.\n", spline->interp->xmin , spline->interp->xmax, E_min / eV, E_max / eV);
-  printf ("INFO: s_photons_per_tea 2 eV EXAMPLE %.17g\n", s_photons_per_tea (2 * eV, F_s.params) * 1E-3 * eV);
+  DEBUG_PRINT ("λ_min = %lf nm, λ_max = %lf nm, E_min = %lf eV, E_max = %lf eV.\n", spline->interp->xmin , spline->interp->xmax, E_min / eV, E_max / eV);
+  DEBUG_PRINT ("s_photons_per_tea 2 eV EXAMPLE %.17g\n", s_photons_per_tea (2 * eV, F_s.params) * 1E-3 * eV);
 
   struct min_params sql_min_params;
   sql_min_params.Emax = E_max;
@@ -390,9 +402,9 @@ sqlimit_main (struct csv_data *spectrum)
    * exceeded max number of iterations
    * Thus, we have to "pass" the error  */
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
-  int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &solar_constant, &error);
-  printf ("INFO: (Error code %d) Calculated solar constant is %lf W/m^2 with error %lf.\n", err_code, solar_constant, error);
-  printf ("INFO: solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
+  int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
+  DEBUG_PRINT ("(Error code %d) Calculated solar constant is %lf W/m^2 with error %lf.\n", err_code, radiation, error);
+  DEBUG_PRINT ("solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
    * gsl_multimin_fminizer_nmsimplex and gsl_multimin_fminimizer_nmsimplex2 are both of O(N^2) memory usage
@@ -404,12 +416,12 @@ sqlimit_main (struct csv_data *spectrum)
   sql_min_params.Egap = 1.1 * eV;
   min_func.params = &sql_min_params;
 
-  printf ("INFO: RR0 1.1 eV EXAMPLE %lf /(m^2 s)\n", RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
-  printf ("INFO: JSC 1.1 eV EXAMPLE %lf A/m^2\n", JSC (&sql_min_params));
-  printf ("INFO: VOC 1.1 eV EXAMPLE %lf V\n", VOC (&sql_min_params));
-  printf ("INFO: V_mpp 1.1 eV EXAMPLE %lf V\n", V_mpp (&min_func));
-  printf ("INFO: max_efficiency 1.1 eV EXAMPLE %lf V\n", max_efficiency (solar_constant, &min_func));
-  printf ("INFO: fill_factor 1.1 eV EXAMPLE %lf\n", fill_factor (&min_func));
+  DEBUG_PRINT ("RR0 1.1 eV EXAMPLE %lf /(m^2 s)\n", RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
+  DEBUG_PRINT ("JSC 1.1 eV EXAMPLE %lf A/m^2\n", JSC (&sql_min_params));
+  DEBUG_PRINT ("VOC 1.1 eV EXAMPLE %lf V\n", VOC (&sql_min_params));
+  DEBUG_PRINT ("V_mpp 1.1 eV EXAMPLE %lf V\n", V_mpp (&min_func));
+  DEBUG_PRINT ("max_efficiency 1.1 eV EXAMPLE %lf V\n", max_efficiency (radiation, &min_func));
+  DEBUG_PRINT ("fill_factor 1.1 eV EXAMPLE %lf\n", fill_factor (&min_func));
 
   eff_bg_data.length = 100;
   eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
@@ -421,13 +433,14 @@ sqlimit_main (struct csv_data *spectrum)
     {
       sql_min_params.Egap = eff_bg_data.bandgap[i];
       min_func.params = &sql_min_params;
-      eff_bg_data.efficiency[i] = max_efficiency (solar_constant, &min_func);
+      eff_bg_data.efficiency[i] = max_efficiency (radiation, &min_func);
     }
   timer = clock () - timer;
-  printf ("Time cost: %lf s\n", ((double) timer) / CLOCKS_PER_SEC);
+  DEBUG_PRINT ("Time cost: %lf s\n", ((double) timer) / CLOCKS_PER_SEC);
   gsl_vector_view eff_list = gsl_vector_view_array (eff_bg_data.efficiency, eff_bg_data.length);
   printf ("Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
 
+#ifdef DEBUG
   eff_bg_data.fill_factor = (double *)calloc (eff_bg_data.length, sizeof (double));
   for (size_t i = 0; i < eff_bg_data.length; i++)
     {
@@ -435,14 +448,108 @@ sqlimit_main (struct csv_data *spectrum)
       min_func.params = &sql_min_params;
       eff_bg_data.fill_factor[i] = fill_factor (&min_func);
     }
+#endif
 
-  printf ("INFO: absorbed_power 1000 nm EXAMPLE %lf\n", absorbed_power (1E-6, lambda_min, lambda_max, solar_constant, &sql_spline_params, p_int_ws));
-  printf ("INFO: check Stefan–Boltzmann law (should equal 1): %lf\n", sigma_SB * gsl_pow_4 (345 /* K */) / emitted_radiation (345 /*K*/, 8E-5 /* m */, p_int_ws));
+  DEBUG_PRINT ("absorbed_power 1000 nm EXAMPLE %lf\n", absorbed_power (1E-6, lambda_min, lambda_max, radiation, &sql_spline_params, p_int_ws));
+  DEBUG_PRINT ("check Stefan–Boltzmann law (should equal 1): %lf\n", sigma_SB * gsl_pow_4 (345 /* K */) / emitted_radiation (345 /*K*/, 8E-5 /* m */, p_int_ws));
 
   // Restore the default error handler
   gsl_set_error_handler (default_handler);
 
   gsl_spline_free (spline);
+  gsl_interp_accel_free (acc);
+  gsl_integration_workspace_free (p_int_ws);
+
+  return eff_bg_data;
+}
+
+struct eff_bg_2d
+sqlimit_main_2d (void *spectrum,
+                 bool  axis)
+{
+  unsigned int i;
+  struct eff_bg_2d eff_bg_data;
+
+  gsl_interp_accel *acc = gsl_interp_accel_alloc ();
+  const gsl_interp_type *t = gsl_interp_linear;
+  struct csv_data *spectrum_1d = (struct csv_data *)spectrum;
+  struct csv_data_2d *spectrum_2d = (struct csv_data_2d *)spectrum;
+  gsl_spline **splines = (gsl_spline **)calloc (spectrum_2d->num_datarows, sizeof (gsl_spline *));
+  if (axis == HORIZONTAL)  // horizontal
+    {
+      for (i = 0; i < spectrum_2d->num_datarows; i++)
+        {
+          splines[i] = gsl_spline_alloc (t, spectrum_2d->num_fields);
+          gsl_spline_init (splines[i], spectrum_2d->wavelengths, spectrum_2d->intensities[i], spectrum_2d->num_datarows);
+        }
+    }
+  else
+    {
+      fprintf (stderr, "Axis = 1, Dim = 2 is not implemented.\n");
+      return eff_bg_data;
+    }
+
+  const size_t iter_lim = 50;
+  gsl_integration_workspace *p_int_ws = gsl_integration_workspace_alloc (iter_lim);
+
+  double radiation, error, lambda_min, lambda_max, E_min, E_max;
+  struct spline_params sql_spline_params;
+  sql_spline_params.acc = acc;
+
+  gsl_function F_p, F_s;
+  F_p.function = &power_per_tea;
+  F_s.function = &s_photons_per_tea;
+
+  struct min_params sql_min_params;
+
+  gsl_multimin_function min_func;
+  min_func.n = 1;
+  min_func.f = &func_to_minimize;
+
+  eff_bg_data.length = 100;
+  eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
+  eff_bg_data.efficiency = (double **)calloc (eff_bg_data.length, sizeof (double *));
+
+  gsl_vector_view eff_list;
+  gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
+  FILE *fout = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/poly_spectrum_results.txt", "w");
+
+  for (i = 0; i < spectrum_2d->num_datarows; i++)
+    {
+      sql_spline_params.spline = splines[i];
+      F_p.params = &sql_spline_params;
+      F_s.params = &sql_spline_params;
+
+      lambda_min = splines[i]->interp->xmin * 1E-9;
+      lambda_max = splines[i]->interp->xmax * 1E-9;
+      E_min = hPlanck * c0 / lambda_max;
+      E_max = hPlanck * c0 / lambda_min;
+      sql_min_params.Emax = E_max;
+      sql_min_params.F_s = &F_s;
+
+      gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
+
+      min_func.params = &sql_min_params;
+
+      for (size_t j = 0; i < eff_bg_data.length; i++)
+        {
+          sql_min_params.Egap = eff_bg_data.bandgap[j];
+          min_func.params = &sql_min_params;
+          eff_bg_data.efficiency[i][j] = max_efficiency (radiation, &min_func);
+        }
+
+      eff_list = gsl_vector_view_array (eff_bg_data.efficiency[i], eff_bg_data.length);
+
+      fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
+    }
+
+  fclose (fout);
+
+  gsl_set_error_handler (default_handler);
+
+  for (i = 0; i < spectrum_2d->num_datarows; i++)
+    gsl_spline_free (splines[i]);
+
   gsl_interp_accel_free (acc);
   gsl_integration_workspace_free (p_int_ws);
 
