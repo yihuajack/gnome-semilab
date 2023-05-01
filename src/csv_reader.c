@@ -33,34 +33,35 @@ struct csv_count
 
 struct csv_head
 {
-  char **fields;
-  int size;  // number of data cells
-  int buffer_size;
-  unsigned long num_rows;
+  char          **fields;
+  int             size;  // number of data cells
+  int             buffer_size;
+  unsigned long   num_rows;
 };
 
 struct csv_body_uint_double
 {
   unsigned int *wavelengths;
-  double *intensities;
-  int size;
-  int buffer_size;
-  int num_rows;
-  unsigned int curr_num_cols;
-  unsigned int num_cols;
-  bool error;
-  bool buf_reallocated;
+  double       *intensities;
+  int           size;
+  int           buffer_size;
+  int           num_rows;
+  unsigned int  curr_num_cols;
+  unsigned int  num_cols;
+  bool          error;
+  bool          buf_reallocated;
 };
 
 struct csv_body_double_double
 {
-  double *data;
-  int size;
-  int buffer_size;
-  int num_rows;
-  unsigned int curr_num_cols;
-  unsigned int num_cols;
-  bool error;
+  double       *data;
+  unsigned int  size;
+  unsigned int  buffer_size;
+  unsigned int  num_rows;
+  unsigned int  curr_num_cols;
+  unsigned int  num_cols;
+  bool          error;
+  bool          with_header;
 };
 
 typedef void (*CB1_UINT_DOUBLE)(void *, size_t, struct csv_body_uint_double *);
@@ -250,19 +251,23 @@ cb1_uint_double (void   *s,
 }
 
 void
-cb1_double_double (void  *s,
-                   size_t len,
+cb1_double_double (void   *s,
+                   size_t  len,
                    void   *data)
 {
   struct csv_body_double_double *body = (struct csv_body_double_double *)data;
   char *endptr = NULL;
   if (body->error)
     return;
+  // When scanning the first row, determine the number of columns
   if (!body->num_rows)
     {
       body->curr_num_cols++;
       body->num_cols++;
-      return;
+      /* If the table has a header, then skip the header row;
+       * otherwise, continue to read in the first row as the wavelength row. */
+      if (body->with_header)
+        return;
     }
   if (body->size + 1 >= body->buffer_size)
     {
@@ -271,10 +276,23 @@ cb1_double_double (void  *s,
       body->data = body->data ? (double *)realloc (body->data, sizeof (double) * body->buffer_size)
                               : (double *)calloc (body->buffer_size, sizeof (double));
     }
-  body->data[body->size++] = s ? strtod ((const char *)s, &endptr) : 0;
+  /* strtod () cannot properly convert strings with UTF-8 BOM to double, *endptr = -17 '\357'
+   * It is difficult to guess file encoding when opening the file
+   * You can check UTF-8 encoding by GLib's functions g_utf8_validate() or g_utf8_get_char_validated()
+   * Use g_strtod() instead of g_ascii_strtod() to convert UTF-8 string to double
+   * The UTF-8 byte order mark (BOM) is -17 '\357', -69 '\273', -65 '\277' */
+  const char *str = s;
+  if (str[0] == '\xEF' && str[1] == '\xBB' && str[2] == '\xBF')
+    {
+      // memmove(str, str + 3, strlen(str) - 2);
+      fprintf (stderr, "ERROR: Found UTF-8 encoded string.\n");
+      body->error = true;
+      return;
+    }
+  body->data[body->size++] = s ? strtod (str, &endptr) : 0;
   if (*endptr)
     {
-      fprintf (stderr, "ERROR: Found non-double data in the csv result-file: %s\n", (char *)s);
+      fprintf (stderr, "ERROR: Found non-double data in the csv result-file: %s\n", str);
       body->error = true;
     }
 }
@@ -316,10 +334,11 @@ read_csv (FILE         *fp,
   char buf[4096];
   char **fields;
   int dummy;
-  struct csv_parser p;
-  struct csv_body_double_double body = {0};
   void *result;
   size_t bytes_read;
+  struct csv_parser p;
+  struct csv_body_double_double body = {0};
+  body.with_header = with_header;
 
   if (with_header && dim == 1)
     {
@@ -331,7 +350,14 @@ read_csv (FILE         *fp,
         }
     }
 
-  if (csv_init(&p, CSV_STRICT | CSV_REPALL_NL | CSV_STRICT_FINI | CSV_APPEND_NULL | CSV_EMPTY_IS_NULL) != 0)
+  /* CSV_EMPTY_IS_NULL will cause NULL to be passed as the first argument to cb1 for empty, unquoted, fields.
+   * If using that option, you have to manually return cb1 when s is NULL to skip empty lines;
+   * otherwise, SIGSEGV, Segmentation fault
+   * Currently, empty lines or cells are counted as 0
+   * CSV_REPALL_NL will cause each instance of a carriage return (CSV_CR) or linefeed (CSV_LF) outside of a record to be reported
+   * cb2 will be called once for every carriage return or linefeed encountered outside a field
+   * For files with CRLF line terminators, this option will cause the program to count each line twice */
+  if (csv_init(&p, CSV_STRICT | CSV_STRICT_FINI | CSV_APPEND_NULL) != 0)
     {
       fprintf (stderr, "ERROR: csv_init() in read_csv() failed.\n");
       return NULL;
@@ -405,7 +431,7 @@ read_csv (FILE         *fp,
     {
       struct csv_data_2d *data_2d = (struct csv_data_2d *)result;
       data_2d->num_fields = body.num_cols;
-      data_2d->num_datarows = body.num_rows - 1;  // excluding the wavelength row
+      data_2d->num_datarows = body.num_rows - 1;  // excluding the wavelength row, equivalent to body.size / body.num_cols
       if (axis == HORIZONTAL)  // horizontal
         {
           data_2d->wavelengths = (double *)calloc (data_2d->num_fields, sizeof (double));
@@ -414,7 +440,7 @@ read_csv (FILE         *fp,
           for (unsigned int i = 0; i < data_2d->num_datarows; i++)
             {
               data_2d->intensities[i] = (double *)calloc (data_2d->num_fields, sizeof (double));
-              memcpy (data_2d->intensities[i], data + data_2d->num_fields, data_2d->num_fields * sizeof (double));
+              memcpy (data_2d->intensities[i], data + (i + 1) * data_2d->num_fields, data_2d->num_fields * sizeof (double));
             }
         }
     }

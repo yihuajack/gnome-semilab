@@ -23,8 +23,7 @@
 
 #include "../src/sqlimit.h"
 
-#define TEST_POLY
-
+// #elifdef and #elifndef are not supported by MSVC yet
 #if __GNUC__ >= 12 || __clang_major__ >= 13
 #define ELIFDEF_SUPPORTED
 #endif
@@ -46,7 +45,7 @@ main (int   argc,
   // is the THIRD column (Global tilt W*m-2*nm-1) of the original dataset file
   // TODO: directly read from https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls
 #ifdef TEST_ASTMG173
-  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/astmg173.csv", "r");
+  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/astmg173.csv", "r");
   if (!fp)
     {
       perror ("File opening failed\n");
@@ -56,12 +55,21 @@ main (int   argc,
   struct csv_data *spectrum = read_csv (fp, true, true, 1);
   sqlimit_main (spectrum, VERTICAL);
   fclose (fp);
-// #elifdef and #elifndef are not supported by MSVC yet
 #elif defined TEST_POLY
-  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/poly_spectrum.csv", "r");
+  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/poly_spectrum.csv", "r");
   struct csv_data_2d *spectrum_2d = read_csv (fp, false, false, 2);
-  sqlimit_main_2d (spectrum_2d, HORIZONTAL);
+  struct eff_bg_2d eff_bg_data = sqlimit_main_2d (spectrum_2d, HORIZONTAL);
   fclose (fp);
+  free (spectrum_2d->wavelengths);
+  for (size_t i = 0; i < spectrum_2d->num_datarows; i++)
+    free (spectrum_2d->intensities[i]);
+
+  free (spectrum_2d->intensities);
+  free (eff_bg_data.bandgap);
+  for (size_t i = 0; i < eff_bg_data.length; i++)
+    free (eff_bg_data.efficiency[i]);
+
+  free (eff_bg_data.efficiency);
 #endif
   exit (EXIT_SUCCESS);
 }

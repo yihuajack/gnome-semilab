@@ -1,7 +1,7 @@
 {
     "app-id" : "com.github.yihuajack.GnomeSemiLab",
     "runtime" : "org.gnome.Platform",
-    "runtime-version" : "43",
+    "runtime-version" : "44",
     "sdk" : "org.gnome.Sdk",
     "command" : "gnome-semilab",
     "finish-args" : [
@@ -47,8 +47,8 @@
             "sources" : [
                 {
                     "type" : "git",
-                    "branch" : "main",
-                    "url" :"https://github.com/jmcnamara/libxlsxwriter"
+                    "branch" : "cmake-fix",
+                    "url" :"https://github.com/yihuajack/libxlsxwriter"
                 }
             ]
         },

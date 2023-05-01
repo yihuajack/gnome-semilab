@@ -25,8 +25,11 @@
 #ifndef SQLIMIT_H
 #define SQLIMIT_H
 
+/* https://stackoverflow.com/a/1644898/13087142
+ * https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c/1644898#1644898
+ * Without ##, for a single argument, error: expected expression before ‘)’ token */
 #ifdef DEBUG
-#define DEBUG_PRINT(fmt, ...) printf("INFO: " fmt, __VA_ARGS__)
+#define DEBUG_PRINT(fmt, ...) do {printf("INFO: " fmt, ##__VA_ARGS__); } while (0)
 #else
 #define DEBUG_PRINT(fmt, ...) do {} while (0)
 #endif
@@ -89,12 +92,12 @@ double           *linspace        (double start,
                                    size_t num);
 
 extern
-struct eff_bg     sqlimit_main    (void *spectrum,
-                                   bool  axis);
+struct eff_bg     sqlimit_main    (struct csv_data *spectrum,
+                                   bool             axis);
 
 extern
-struct eff_bg_2d  sqlimit_main_2d (void *spectrum,
-                                   bool  axis);
+struct eff_bg_2d  sqlimit_main_2d (struct csv_data_2d *spectrum,
+                                   bool                axis);
 
 #endif  /* SQLIMIT_H */
 

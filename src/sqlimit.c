@@ -234,7 +234,7 @@ static double
 absorbed_power (double                     absorption_edge,  /* m */
                 double                     lambda_min,       /* m */
                 double                     lambda_max,       /* m */
-                double                     radiation,   /* W/m^2 */
+                double                     radiation,        /* W/m^2 */
                 struct spline_params      *params,
                 gsl_integration_workspace *int_ws)
 {
@@ -315,10 +315,10 @@ double *linspace (double start,
 }
 
 struct eff_bg
-sqlimit_main (void *spectrum,
-              bool  axis)
+sqlimit_main (struct csv_data *spectrum,
+              bool             axis)
 {
-  struct eff_bg eff_bg_data;
+  struct eff_bg eff_bg_data = {0};
 
   gsl_interp_accel *acc = gsl_interp_accel_alloc ();
   DEBUG_PRINT ("Interpolation lookup accelerator object allocated.\n");
@@ -330,12 +330,11 @@ sqlimit_main (void *spectrum,
    * GSL_ERROR ("data must match size of spline object", GSL_EINVAL);
    * If the size is less than the total size of data, the data will be truncated */
   int spline_status;
-  struct csv_data *spectrum_1d = (struct csv_data *)spectrum;
-  gsl_spline *spline = gsl_spline_alloc (t, spectrum_1d->num_datarows);
-  DEBUG_PRINT ("Spline allocated of size %u.\n", spectrum_1d->num_datarows);
+  gsl_spline *spline = gsl_spline_alloc (t, spectrum->num_datarows);
+  DEBUG_PRINT ("Spline allocated of size %u.\n", spectrum->num_datarows);
   if (axis == VERTICAL)  // vertical
     {
-      spline_status = gsl_spline_init (spline, spectrum_1d->wavelengths, spectrum_1d->intensities, spectrum_1d->num_datarows);
+      spline_status = gsl_spline_init (spline, spectrum->wavelengths, spectrum->intensities, spectrum->num_datarows);
     }
   else
     {
@@ -346,7 +345,7 @@ sqlimit_main (void *spectrum,
     {
       fprintf (stderr, "ERROR: %s\n",  gsl_strerror (spline_status));
     }
-  DEBUG_PRINT ("Spline initialized with error number %d.\n", status);
+  DEBUG_PRINT ("Spline initialized with error number %d.\n", spline_status);
 
   /* Need to allocate enough size; otherwise
    * ERROR: a maximum of one iteration was insufficient
@@ -356,7 +355,7 @@ sqlimit_main (void *spectrum,
   const size_t iter_lim = 50;
   gsl_integration_workspace *p_int_ws = gsl_integration_workspace_alloc (iter_lim);
 
-  // For the solar spectrum, the radiation is the solar constant approximately equal to 100 W/m^2
+  // For the solar spectrum, the radiation is the solar constant approximately equal to 1000 W/m^2
   double radiation;  // the final approximation from the extrapolation `result`
   double error;  // an estimate of the absolute error `abserr`
   struct spline_params sql_spline_params;
@@ -403,7 +402,7 @@ sqlimit_main (void *spectrum,
    * Thus, we have to "pass" the error  */
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
-  DEBUG_PRINT ("(Error code %d) Calculated solar constant is %lf W/m^2 with error %lf.\n", err_code, radiation, error);
+  DEBUG_PRINT ("(Error code %d) Calculated radiation is %lf W/m^2 with error %lf.\n", err_code, radiation, error);
   DEBUG_PRINT ("solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
@@ -464,23 +463,21 @@ sqlimit_main (void *spectrum,
 }
 
 struct eff_bg_2d
-sqlimit_main_2d (void *spectrum,
-                 bool  axis)
+sqlimit_main_2d (struct csv_data_2d *spectrum,
+                 bool                axis)
 {
-  unsigned int i;
-  struct eff_bg_2d eff_bg_data;
+  unsigned int i = 0;
+  struct eff_bg_2d eff_bg_data = {0};
 
   gsl_interp_accel *acc = gsl_interp_accel_alloc ();
   const gsl_interp_type *t = gsl_interp_linear;
-  struct csv_data *spectrum_1d = (struct csv_data *)spectrum;
-  struct csv_data_2d *spectrum_2d = (struct csv_data_2d *)spectrum;
-  gsl_spline **splines = (gsl_spline **)calloc (spectrum_2d->num_datarows, sizeof (gsl_spline *));
+  gsl_spline **splines = (gsl_spline **)calloc (spectrum->num_datarows, sizeof (gsl_spline *));
   if (axis == HORIZONTAL)  // horizontal
     {
-      for (i = 0; i < spectrum_2d->num_datarows; i++)
+      for (i = 0; i < spectrum->num_datarows; i++)
         {
-          splines[i] = gsl_spline_alloc (t, spectrum_2d->num_fields);
-          gsl_spline_init (splines[i], spectrum_2d->wavelengths, spectrum_2d->intensities[i], spectrum_2d->num_datarows);
+          splines[i] = gsl_spline_alloc (t, spectrum->num_fields);
+          gsl_spline_init (splines[i], spectrum->wavelengths, spectrum->intensities[i], spectrum->num_fields);
         }
     }
   else
@@ -496,40 +493,50 @@ sqlimit_main_2d (void *spectrum,
   struct spline_params sql_spline_params;
   sql_spline_params.acc = acc;
 
-  gsl_function F_p, F_s;
+  gsl_function F_p, F_s, F_RR0;
   F_p.function = &power_per_tea;
   F_s.function = &s_photons_per_tea;
-
-  struct min_params sql_min_params;
+  F_RR0.function = &RR0_integrand;
+  F_RR0.params = NULL;
 
   gsl_multimin_function min_func;
   min_func.n = 1;
   min_func.f = &func_to_minimize;
 
+  lambda_min = splines[0]->interp->xmin * 1E-9;
+  lambda_max = splines[0]->interp->xmax * 1E-9;
+  E_min = hPlanck * c0 / lambda_max;
+  E_max = hPlanck * c0 / lambda_min;
+
+  struct min_params sql_min_params;
+  sql_min_params.Emax = E_max;
+  sql_min_params.F_RR0 = &F_RR0;
+
   eff_bg_data.length = 100;
-  eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
+  /* The stop value should be less than E_max; otherwise, wavelengths will be out of range;
+   * however, the start value could be less than or equal to E_min.
+   * The stop value should also not be exactly same as E_max;
+   * otherwise, the program will iterate infinitely in V_mpp(). */
+  eff_bg_data.bandgap = linspace (E_min, 0.999 * E_max, eff_bg_data.length);
   eff_bg_data.efficiency = (double **)calloc (eff_bg_data.length, sizeof (double *));
 
   gsl_vector_view eff_list;
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   FILE *fout = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/poly_spectrum_results.txt", "w");
 
-  for (i = 0; i < spectrum_2d->num_datarows; i++)
+  for (i = 0; i < spectrum->num_datarows; i++)
     {
       sql_spline_params.spline = splines[i];
       F_p.params = &sql_spline_params;
       F_s.params = &sql_spline_params;
 
-      lambda_min = splines[i]->interp->xmin * 1E-9;
-      lambda_max = splines[i]->interp->xmax * 1E-9;
-      E_min = hPlanck * c0 / lambda_max;
-      E_max = hPlanck * c0 / lambda_min;
-      sql_min_params.Emax = E_max;
-      sql_min_params.F_s = &F_s;
-
       gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
 
+      sql_min_params.F_s = &F_s;
+      sql_min_params.Egap = 2.0 * eV;
       min_func.params = &sql_min_params;
+      DEBUG_PRINT ("V_mpp 2.0 eV EXAMPLE %lf V\n", V_mpp (&min_func));
+      DEBUG_PRINT ("max_efficiency 2.0 eV EXAMPLE %lf V\n", max_efficiency (radiation, &min_func));
 
       for (size_t j = 0; i < eff_bg_data.length; i++)
         {
@@ -540,16 +547,16 @@ sqlimit_main_2d (void *spectrum,
 
       eff_list = gsl_vector_view_array (eff_bg_data.efficiency[i], eff_bg_data.length);
 
-      fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
+      fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, E_min + gsl_vector_max_index (&eff_list.vector) * (0.999 * E_max - E_min) / (eff_bg_data.length - 1));
+
+      gsl_spline_free (splines[i]);
     }
 
   fclose (fout);
 
   gsl_set_error_handler (default_handler);
 
-  for (i = 0; i < spectrum_2d->num_datarows; i++)
-    gsl_spline_free (splines[i]);
-
+  free (splines);
   gsl_interp_accel_free (acc);
   gsl_integration_workspace_free (p_int_ws);
 
