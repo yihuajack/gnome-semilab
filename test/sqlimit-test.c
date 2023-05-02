@@ -57,20 +57,25 @@ main (int   argc,
   fclose (fp);
 #elif defined TEST_POLY
   fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/poly_spectrum.csv", "r");
-  struct csv_data_2d *spectrum_2d = read_csv (fp, false, false, 2);
-  struct eff_bg_2d eff_bg_data = sqlimit_main_2d (spectrum_2d, HORIZONTAL);
+  struct csv_data_2d *spectrum = read_csv (fp, false, false, 2);
+  struct eff_bg_2d eff_bg_data = sqlimit_main_2d (spectrum, HORIZONTAL);
   fclose (fp);
-  free (spectrum_2d->wavelengths);
-  for (size_t i = 0; i < spectrum_2d->num_datarows; i++)
+  for (size_t i = 0; i < spectrum->num_datarows; i++)
     free (spectrum_2d->intensities[i]);
 
-  free (spectrum_2d->intensities);
   free (eff_bg_data.bandgap);
   for (size_t i = 0; i < eff_bg_data.length; i++)
     free (eff_bg_data.efficiency[i]);
 
   free (eff_bg_data.efficiency);
+#elif defined TEST_SPE
+  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/AM1.5G ed2 1 sun.spe", "r");
+  struct csv_data *spectrum = read_spe (fp);
+  sqlimit_main (spectrum, VERTICAL);
 #endif
+  free (spectrum->wavelengths);
+  free (spectrum->intensities);
+  free (spectrum);
   exit (EXIT_SUCCESS);
 }
 

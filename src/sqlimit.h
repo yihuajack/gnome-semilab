@@ -51,7 +51,7 @@ struct eff_bg
 struct eff_bg_2d
 {
   double  *bandgap;
-  double **efficiency;
+  double **efficiency;  // Size of spectrum->num_datarows × length
   size_t   length;
 };
 

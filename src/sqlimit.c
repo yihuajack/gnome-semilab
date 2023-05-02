@@ -518,7 +518,7 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
    * The stop value should also not be exactly same as E_max;
    * otherwise, the program will iterate infinitely in V_mpp(). */
   eff_bg_data.bandgap = linspace (E_min, 0.999 * E_max, eff_bg_data.length);
-  eff_bg_data.efficiency = (double **)calloc (eff_bg_data.length, sizeof (double *));
+  eff_bg_data.efficiency = (double **)calloc (spectrum->num_datarows, sizeof (double *));
 
   gsl_vector_view eff_list;
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
@@ -526,19 +526,16 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
 
   for (i = 0; i < spectrum->num_datarows; i++)
     {
+      eff_bg_data.efficiency[i] = (double *)calloc (eff_bg_data.length, sizeof (double));
+
       sql_spline_params.spline = splines[i];
       F_p.params = &sql_spline_params;
       F_s.params = &sql_spline_params;
+      sql_min_params.F_s = &F_s;
 
       gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
 
-      sql_min_params.F_s = &F_s;
-      sql_min_params.Egap = 2.0 * eV;
-      min_func.params = &sql_min_params;
-      DEBUG_PRINT ("V_mpp 2.0 eV EXAMPLE %lf V\n", V_mpp (&min_func));
-      DEBUG_PRINT ("max_efficiency 2.0 eV EXAMPLE %lf V\n", max_efficiency (radiation, &min_func));
-
-      for (size_t j = 0; i < eff_bg_data.length; i++)
+      for (size_t j = 0; j < eff_bg_data.length; j++)
         {
           sql_min_params.Egap = eff_bg_data.bandgap[j];
           min_func.params = &sql_min_params;
@@ -547,7 +544,7 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
 
       eff_list = gsl_vector_view_array (eff_bg_data.efficiency[i], eff_bg_data.length);
 
-      fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, E_min + gsl_vector_max_index (&eff_list.vector) * (0.999 * E_max - E_min) / (eff_bg_data.length - 1));
+      fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, (E_min + gsl_vector_max_index (&eff_list.vector) * (0.999 * E_max - E_min) / (eff_bg_data.length - 1)) / eV);
 
       gsl_spline_free (splines[i]);
     }

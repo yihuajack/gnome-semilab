@@ -75,32 +75,35 @@ struct var_csv_data
 };
 
 extern
-char   **read_csv_fields   (FILE *fp,
-                            int  *length);
+char           **read_csv_fields   (FILE *fp,
+                                    int  *length);
 
 extern
-void     cb1_uint_double   (void   *s,
-                            size_t  len,
-                            void   *data);
+void             cb1_uint_double   (void   *s,
+                                    size_t  len,
+                                    void   *data);
 
 extern
-void     cb1_double_double (void   *s,
-                            size_t  len,
-                            void    *data);
+void             cb1_double_double (void   *s,
+                                    size_t  len,
+                                    void    *data);
 
 extern
-void     cb2_uint_double   (int   c,
-                            void *data);
+void             cb2_uint_double   (int   c,
+                                    void *data);
 
 extern
-void     cb2_double_double (int   c,
-                            void *data);
+void             cb2_double_double (int   c,
+                                    void *data);
 
 extern
-void    *read_csv          (FILE         *fp,
-                            bool          with_header,
-                            bool          axis,
-                            unsigned int  dim);
+void            *read_csv          (FILE         *fp,
+                                    bool          with_header,
+                                    bool          axis,
+                                    unsigned int  dim);
+
+extern
+struct csv_data *read_spe          (FILE         *fp);
 
 #endif /* CSV_HEADER_H */
 

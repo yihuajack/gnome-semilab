@@ -93,11 +93,11 @@ sl_fopen (const char *filename,
 }
 
 size_t
-sl_fread (void  *buffer,
-          size_t size,
-          size_t count,
-          FILE  *stream,
-          bool   allow_early_eof)
+sl_fread (void   *buffer,
+          size_t  size,
+          size_t  count,
+          FILE   *stream,
+          bool    allow_early_eof)
 {
   size_t read_len = fread (buffer, size, count, stream);
   if (read_len != count)

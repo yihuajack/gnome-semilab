@@ -315,6 +315,13 @@ gnome_semilab_workspace_dispose (GObject *object)
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)object;
 
   g_clear_pointer (&self->ws_type, g_free);
+  free (self->spectrum->wavelengths);
+  free (self->spectrum->intensities);
+  free (self->spectrum);
+  free (self->eff_bg_data.bandgap);
+  free (self->eff_bg_data.efficiency);
+  if (self->eff_bg_data.fill_factor)
+    free (self->eff_bg_data.fill_factor);
 
   G_OBJECT_CLASS (gnome_semilab_workspace_parent_class)->dispose (object);
 }
