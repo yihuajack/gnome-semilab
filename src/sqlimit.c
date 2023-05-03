@@ -26,6 +26,7 @@
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_log.h>
 #include <gsl/gsl_multimin.h>
+#include <progressbar/progressbar.h>
 #include <time.h>
 
 #include "sqlimit.h"
@@ -522,6 +523,7 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
 
   gsl_vector_view eff_list;
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
+  progressbar *minimizing_eff = progressbar_new ("", spectrum->num_datarows);
   FILE *fout = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/poly_spectrum_results.txt", "w");
 
   for (i = 0; i < spectrum->num_datarows; i++)
@@ -547,9 +549,11 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
       fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, (E_min + gsl_vector_max_index (&eff_list.vector) * (0.999 * E_max - E_min) / (eff_bg_data.length - 1)) / eV);
 
       gsl_spline_free (splines[i]);
+      progressbar_inc (minimizing_eff);
     }
 
   fclose (fout);
+  progressbar_finish (minimizing_eff);
 
   gsl_set_error_handler (default_handler);
 

@@ -61,7 +61,7 @@ main (int   argc,
   struct eff_bg_2d eff_bg_data = sqlimit_main_2d (spectrum, HORIZONTAL);
   fclose (fp);
   for (size_t i = 0; i < spectrum->num_datarows; i++)
-    free (spectrum_2d->intensities[i]);
+    free (spectrum->intensities[i]);
 
   free (eff_bg_data.bandgap);
   for (size_t i = 0; i < eff_bg_data.length; i++)

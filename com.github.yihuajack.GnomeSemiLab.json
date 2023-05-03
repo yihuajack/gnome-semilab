@@ -47,8 +47,8 @@
             "sources" : [
                 {
                     "type" : "git",
-                    "branch" : "cmake-fix",
-                    "url" :"https://github.com/yihuajack/libxlsxwriter"
+                    "branch" : "main",
+                    "url" :"https://github.com/jmcnamara/libxlsxwriter"
                 }
             ]
         },
@@ -78,6 +78,18 @@
                     "type" : "git",
                     "branch" : "master",
                     "url" : "git://git.code.sf.net/p/plplot/plplot"
+                }
+            ]
+        },
+        {
+            "name" : "progressbar",
+            "builddir" : true,
+            "buildsystem" : "cmake",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "branch" : "master",
+                    "url" : "https://github.com/doches/progressbar"
                 }
             ]
         },

@@ -47,6 +47,9 @@ libcsv_inc = include_directories('/usr/include')
 # Prebuilt objects are specified with the objects keyword argument.
 libcsv_lib = static_library('csv', objects :'/app/lib/libcsv.a')
 libcsv_dep = declare_dependency(link_with : libcsv_lib, include_directories : libcsv_inc)
+progbar_inc = include_directories('/usr/include')
+progbar_lib = static_library('progressbar', objects :'/app/lib/libprogressbar.a')
+progbar_dep = declare_dependency(link_with : progbar_lib, include_directories : progbar_inc)
 
 gnome_semilab_deps = [
   libgtk_dep,
@@ -55,6 +58,7 @@ gnome_semilab_deps = [
   dependency('xlsxwriter'),
   dependency('gsl'),
   dependency('plplot'),
+  progbar_dep,
 ]
 
 gnome_semilab_sources += gnome.compile_resources('gnome-semilab-resources',

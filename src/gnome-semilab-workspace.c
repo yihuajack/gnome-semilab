@@ -197,11 +197,11 @@ gnome_semilab_workspace_open_action (GtkWidget   *instance,
                                      GVariant    *param)
 {
   g_autoptr(GtkFileDialog) file_dialog = NULL;
-  GnomeSemilabWorkspace *self = instance;
+  GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)instance;
 
   g_assert (param == NULL);
   file_dialog = gtk_file_dialog_new ();
-  gtk_file_dialog_set_initial_file (file_dialog, self->file);
+  gtk_file_dialog_set_initial_file (file_dialog, self->table);
 }
 #else
 static void
@@ -237,12 +237,7 @@ gnome_semilab_workspace_sim_action (GtkWidget   *widget,
   open_file_as_spectrum (self);
   g_assert (self->spectrum != NULL);
 
-  /* FILE *fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/Tungsten-Halogen_PCE.tsv", "r");
-   * self->eff_bg_data.length = 200;
-   * csv_sketch_read (fp, &self->eff_bg_data, ' ');
-   * fclose (fp);  */
-
-  self->eff_bg_data = sqlimit_main (self->spectrum);
+  self->eff_bg_data = sqlimit_main (self->spectrum, VERTICAL);
 
   gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->eff_bg_plot), draw_eff_bg_function, &self->eff_bg_data, NULL);
 }
