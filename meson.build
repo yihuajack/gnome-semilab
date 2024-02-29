@@ -73,8 +73,8 @@ test_c_args = [
   ['-Werror=format-security', '-Werror=format=2'],
 ]
 
-gtk_req_version = '4.8.3'
-libadwaita_req_version = '1.2.2'
+gtk_req_version = '4.10.3'
+libadwaita_req_version = '1.3.2'
 
 gtk_req = '>= @0@'.format(gtk_req_version)
 libadwaita_req = '>= @0@'.format(libadwaita_req_version)

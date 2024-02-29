@@ -1,4 +1,4 @@
-/* spe_reader.c
+/* spe2csv.c
  *
  * Copyright 2023 Yihua Liu <yihuajack@live.cn>
  *
@@ -18,31 +18,18 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-/* The SPE reader is used to read SCAPS spectrum files (*.spe)
- * SPE file consists of the comment part and the data part
- * The comment part starts with '>' and introduces the spectrum
- * The data part consists of two columns separated by a space or a tab like TSV files
- * The first column is wavelength in nm
- * The second column is intensity in W/m^2
- * Note that SCAPS is a closed-source software without high-quality maintenance
- * Some spectra are commented with wrong units (W/cm^2) but data with correct units (W/m^2)
- * */
-
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "data_io.h"
+#include "../data_io.h"
 
-struct csv_data *
-read_spe (FILE *fp)
+void
+spe2csv (FILE *fp)
 {
   size_t i = 1, MAX_NUM_ROWS = 1024;
   const size_t MAX_COMMENT_LEN = 256;
   char line[MAX_COMMENT_LEN];
-  struct csv_data *spectrum = (struct csv_data *)malloc (sizeof (struct csv_data));
-  spectrum->num_fields = 2;
-  spectrum->wavelengths = (double *)calloc (MAX_NUM_ROWS, sizeof (double));
-  spectrum->intensities = (double *)calloc (MAX_NUM_ROWS, sizeof (double));
+  FILE *o_csvfp = fopen ("");
 
   while (fgets (line, MAX_COMMENT_LEN, fp))
     {

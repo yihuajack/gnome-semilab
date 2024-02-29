@@ -20,7 +20,7 @@
 
 #include <gsl/gsl_statistics.h>
 
-#include "../src/csv_reader.h"
+#include "../src/data_io.h"
 
 int
 main (int   argc,

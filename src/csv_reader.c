@@ -23,7 +23,7 @@
 #include <csv.h>
 
 #include "utils.h"
-#include "csv_reader.h"
+#include "data_io.h"
 
 struct csv_count
 {

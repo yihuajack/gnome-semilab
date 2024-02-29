@@ -32,6 +32,7 @@
             "sources" : [
                 {
                     "type" : "git",
+                    "branch" : "master",
                     "url" : "https://github.com/rgamble/libcsv"
                 },
                 {
