@@ -44,7 +44,8 @@ main (int   argc,
   // Note that the incident light intensity of the light coming from the sun and sky at at typical latitude on a clear day
   // is the THIRD column (Global tilt W*m-2*nm-1) of the original dataset file
   // TODO: directly read from https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls
-#ifdef TEST_ASTMG173
+#ifdef TEST_CSV  // like astmg173.csv
+  // Currently UTF-8 csv files are not supported yet.
   fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/astmg173.csv", "r");
   if (!fp)
     {

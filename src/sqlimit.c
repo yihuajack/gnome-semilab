@@ -371,11 +371,13 @@ sqlimit_main (struct csv_data *spectrum,
   F_s.params = &sql_spline_params;
   F_RR0.params = NULL;
 
-  // No need to manually calculate xmin and xmax by gsl_statistics' gsk_stats_minmax()
+  // No need to manually calculate xmin and xmax by gsl_statistics' gsl_stats_minmax()
   double lambda_min = spline->interp->xmin * 1E-9, lambda_max = spline->interp->xmax * 1E-9;  /* m */
   double E_min = hPlanck * c0 / lambda_max, E_max = hPlanck * c0 / lambda_min;  /* J */
-  DEBUG_PRINT ("λ_min = %lf nm, λ_max = %lf nm, E_min = %lf eV, E_max = %lf eV.\n", spline->interp->xmin , spline->interp->xmax, E_min / eV, E_max / eV);
-  DEBUG_PRINT ("s_photons_per_tea 2 eV EXAMPLE %.17g\n", s_photons_per_tea (2 * eV, F_s.params) * 1E-3 * eV);
+  double E_mean = (E_min + E_max) / 2;  /* J */
+  double E_min_eV = E_min / eV, E_max_eV = E_max / eV, E_mean_eV = E_mean / eV;  /* eV */
+  DEBUG_PRINT ("λ_min = %lf nm, λ_max = %lf nm, E_min = %lf eV, E_max = %lf eV.\n", spline->interp->xmin , spline->interp->xmax, E_min_eV, E_max_eV);
+  DEBUG_PRINT ("EXAMPLE: s_photons_per_tea(E_mean = %lf eV) = %.17g\n", E_mean_eV, s_photons_per_tea (E_mean, F_s.params) * 1E-3 * eV);
 
   struct min_params sql_min_params;
   sql_min_params.Emax = E_max;
@@ -404,7 +406,7 @@ sqlimit_main (struct csv_data *spectrum,
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
   DEBUG_PRINT ("(Error code %d) Calculated radiation is %lf W/m^2 with error %lf.\n", err_code, radiation, error);
-  DEBUG_PRINT ("solar_photons_above_gap EXAMPLE %lf / (m^2 s)\n", solar_photons_above_gap (1.1 * eV, E_max, &F_s));
+  DEBUG_PRINT ("EXAMPLE: solar_photons_above_gap(E_mean = %lf eV) = %lf / (m^2 s)\n", E_mean_eV, solar_photons_above_gap (E_mean, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
    * gsl_multimin_fminizer_nmsimplex and gsl_multimin_fminimizer_nmsimplex2 are both of O(N^2) memory usage
@@ -413,18 +415,20 @@ sqlimit_main (struct csv_data *spectrum,
 
   min_func.n = 1;  // Number of function components
   min_func.f = &func_to_minimize;
-  sql_min_params.Egap = 1.1 * eV;
+  sql_min_params.Egap = E_mean;
   min_func.params = &sql_min_params;
 
-  DEBUG_PRINT ("RR0 1.1 eV EXAMPLE %lf /(m^2 s)\n", RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
-  DEBUG_PRINT ("JSC 1.1 eV EXAMPLE %lf A/m^2\n", JSC (&sql_min_params));
-  DEBUG_PRINT ("VOC 1.1 eV EXAMPLE %lf V\n", VOC (&sql_min_params));
-  DEBUG_PRINT ("V_mpp 1.1 eV EXAMPLE %lf V\n", V_mpp (&min_func));
-  DEBUG_PRINT ("max_efficiency 1.1 eV EXAMPLE %lf V\n", max_efficiency (radiation, &min_func));
-  DEBUG_PRINT ("fill_factor 1.1 eV EXAMPLE %lf\n", fill_factor (&min_func));
+  DEBUG_PRINT ("EXAMPLE: RR0(E_mean = %lf eV) = %lf /(m^2 s)\n", E_mean_eV, RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
+  DEBUG_PRINT ("EXAMPLE: JSC(E_mean = %lf eV) = %lf A/m^2\n", E_mean_eV, JSC (&sql_min_params));
+  DEBUG_PRINT ("EXAMPLE: VOC(E_mean = %lf eV) = %lf V\n", E_mean_eV, VOC (&sql_min_params));
+  DEBUG_PRINT ("EXAMPLE: V_mpp(E_mean = %lf eV) = %lf V\n", E_mean_eV, V_mpp (&min_func));
+  DEBUG_PRINT ("EXAMPLE: max_efficiency(E_mean = %lf eV) = %lf%%\n", E_mean_eV, max_efficiency (radiation, &min_func) * 100);
+  DEBUG_PRINT ("EXAMPLE: fill_factor(E_mean = %lf eV) = %lf\n", E_mean_eV, fill_factor (&min_func));
 
   eff_bg_data.length = 100;
-  eff_bg_data.bandgap = linspace (0.4 * eV, 3 * eV, eff_bg_data.length);
+  // Start and end of the linear space should be a little narrower, otherwise it will stuck at the last loop below.
+  // Also do not exceed the E_min and E_max limit.
+  eff_bg_data.bandgap = linspace (E_min + 0.01 * eV, E_max - 0.01 * eV, eff_bg_data.length);
   eff_bg_data.efficiency = (double *)calloc (eff_bg_data.length, sizeof (double));
 
   clock_t timer;
@@ -438,7 +442,7 @@ sqlimit_main (struct csv_data *spectrum,
   timer = clock () - timer;
   DEBUG_PRINT ("Time cost: %lf s\n", ((double) timer) / CLOCKS_PER_SEC);
   gsl_vector_view eff_list = gsl_vector_view_array (eff_bg_data.efficiency, eff_bg_data.length);
-  printf ("Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, 0.4 + gsl_vector_max_index (&eff_list.vector) * (3 - 0.4) / (eff_bg_data.length - 1));
+  printf ("Max efficiency %lf%% at %lf eV\n", gsl_vector_max (&eff_list.vector) * 100, E_min_eV + gsl_vector_max_index (&eff_list.vector) * (E_max_eV - E_min_eV) / (eff_bg_data.length - 1));
 
 #ifdef DEBUG
   eff_bg_data.fill_factor = (double *)calloc (eff_bg_data.length, sizeof (double));
@@ -450,7 +454,7 @@ sqlimit_main (struct csv_data *spectrum,
     }
 #endif
 
-  DEBUG_PRINT ("absorbed_power 1000 nm EXAMPLE %lf\n", absorbed_power (1E-6, lambda_min, lambda_max, radiation, &sql_spline_params, p_int_ws));
+  DEBUG_PRINT ("EXAMPLE: absorbed_power(1000 nm) = %lf\n", absorbed_power (1E-6, lambda_min, lambda_max, radiation, &sql_spline_params, p_int_ws));
   DEBUG_PRINT ("check Stefan–Boltzmann law (should equal 1): %lf\n", sigma_SB * gsl_pow_4 (345 /* K */) / emitted_radiation (345 /*K*/, 8E-5 /* m */, p_int_ws));
 
   // Restore the default error handler
