@@ -26,7 +26,7 @@
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_log.h>
 #include <gsl/gsl_multimin.h>
-#include <progressbar/progressbar.h>
+// #include <progressbar/progressbar.h>
 #include <time.h>
 
 #include "sqlimit.h"
@@ -406,7 +406,7 @@ sqlimit_main (struct csv_data *spectrum,
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
   int err_code = gsl_integration_qags (&F_p, E_min, E_max, 1.49E-08, 1.49E-08, iter_lim, p_int_ws, &radiation, &error);
   DEBUG_PRINT ("(Error code %d) Calculated radiation is %lf W/m^2 with error %lf.\n", err_code, radiation, error);
-  DEBUG_PRINT ("EXAMPLE: solar_photons_above_gap(E_mean = %lf eV) = %lf / (m^2 s)\n", E_mean_eV, solar_photons_above_gap (E_mean, E_max, &F_s));
+  DEBUG_PRINT ("EXAMPLE: solar_photons_above_gap(E_g = %lf eV) = %lf / (m^2 s)\n", 1.5, solar_photons_above_gap (1.5 * eV, E_max, &F_s));
 
   /* Use Nelder-Mead (downhill) Simplex algorithm (minimizing without derivatives)
    * gsl_multimin_fminizer_nmsimplex and gsl_multimin_fminimizer_nmsimplex2 are both of O(N^2) memory usage
@@ -415,15 +415,15 @@ sqlimit_main (struct csv_data *spectrum,
 
   min_func.n = 1;  // Number of function components
   min_func.f = &func_to_minimize;
-  sql_min_params.Egap = E_mean;
+  sql_min_params.Egap = 1.5 * eV;
   min_func.params = &sql_min_params;
 
-  DEBUG_PRINT ("EXAMPLE: RR0(E_mean = %lf eV) = %lf /(m^2 s)\n", E_mean_eV, RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
-  DEBUG_PRINT ("EXAMPLE: JSC(E_mean = %lf eV) = %lf A/m^2\n", E_mean_eV, JSC (&sql_min_params));
-  DEBUG_PRINT ("EXAMPLE: VOC(E_mean = %lf eV) = %lf V\n", E_mean_eV, VOC (&sql_min_params));
-  DEBUG_PRINT ("EXAMPLE: V_mpp(E_mean = %lf eV) = %lf V\n", E_mean_eV, V_mpp (&min_func));
-  DEBUG_PRINT ("EXAMPLE: max_efficiency(E_mean = %lf eV) = %lf%%\n", E_mean_eV, max_efficiency (radiation, &min_func) * 100);
-  DEBUG_PRINT ("EXAMPLE: fill_factor(E_mean = %lf eV) = %lf\n", E_mean_eV, fill_factor (&min_func));
+  DEBUG_PRINT ("EXAMPLE: RR0(E_g = %lf eV) = %lf /(m^2 s)\n", 1.5, RR0 (sql_min_params.Egap, sql_min_params.Emax, sql_min_params.F_RR0));
+  DEBUG_PRINT ("EXAMPLE: JSC(E_g = %lf eV) = %lf A/m^2\n", 1.5, JSC (&sql_min_params));
+  DEBUG_PRINT ("EXAMPLE: VOC(E_g = %lf eV) = %lf V\n", 1.5, VOC (&sql_min_params));
+  DEBUG_PRINT ("EXAMPLE: V_mpp(E_g = %lf eV) = %lf V\n", 1.5, V_mpp (&min_func));
+  DEBUG_PRINT ("EXAMPLE: max_efficiency(E_g = %lf eV) = %lf%%\n", 1.5, max_efficiency (radiation, &min_func) * 100);
+  DEBUG_PRINT ("EXAMPLE: fill_factor(E_g = %lf eV) = %lf\n", 1.5, fill_factor (&min_func));
 
   eff_bg_data.length = 100;
   // Start and end of the linear space should be a little narrower, otherwise it will stuck at the last loop below.
@@ -527,7 +527,7 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
 
   gsl_vector_view eff_list;
   gsl_error_handler_t *default_handler = gsl_set_error_handler_off ();
-  progressbar *minimizing_eff = progressbar_new ("", spectrum->num_datarows);
+//  progressbar *minimizing_eff = progressbar_new ("", spectrum->num_datarows);
   FILE *fout = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/poly_spectrum_results.txt", "w");
 
   for (i = 0; i < spectrum->num_datarows; i++)
@@ -553,11 +553,11 @@ sqlimit_main_2d (struct csv_data_2d *spectrum,
       fprintf (fout, "Max efficiency %lf%% at %lf eV\n", gsl_vector_max(&eff_list.vector) * 100, (E_min + gsl_vector_max_index (&eff_list.vector) * (0.999 * E_max - E_min) / (eff_bg_data.length - 1)) / eV);
 
       gsl_spline_free (splines[i]);
-      progressbar_inc (minimizing_eff);
+//      progressbar_inc (minimizing_eff);
     }
 
   fclose (fout);
-  progressbar_finish (minimizing_eff);
+//  progressbar_finish (minimizing_eff);
 
   gsl_set_error_handler (default_handler);
 

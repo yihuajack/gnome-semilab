@@ -24,7 +24,7 @@
 
 #ifndef SQLIMIT_H
 #define SQLIMIT_H
-
+#define DEBUG
 /* https://stackoverflow.com/a/1644898/13087142
  * https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c/1644898#1644898
  * Without ##, for a single argument, error: expected expression before ‘)’ token */

@@ -33,7 +33,7 @@
 #define ELIFDEF_SUPPORTED
 #else
 #endif
-
+#define TEST_CSV
 int
 main (int   argc,
       char *argv[])
@@ -46,16 +46,19 @@ main (int   argc,
   // TODO: directly read from https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls
 #ifdef TEST_CSV  // like astmg173.csv
   // Currently UTF-8 csv files are not supported yet.
-  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/astmg173.csv", "r");
+  fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/Tungsten-Halogen 3300K.csv", "r");
   if (!fp)
     {
       perror ("File opening failed\n");
       exit (EXIT_FAILURE);
     }
   rewind (fp);
-  struct csv_data *spectrum = read_csv (fp, true, true, 1);
+  struct csv_data *spectrum = read_csv (fp, true, true, 1);  // 2nd arg: with_header
   sqlimit_main (spectrum, VERTICAL);
   fclose (fp);
+  free (spectrum->wavelengths);
+  free (spectrum->intensities);
+  free (spectrum);
 #elif defined TEST_POLY
   fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/poly_spectrum.csv", "r");
   struct csv_data_2d *spectrum = read_csv (fp, false, false, 2);
@@ -73,10 +76,10 @@ main (int   argc,
   fp = fopen ("/home/ayka-tsuzuki/gnome-semilab/test/spectra/AM1.5G ed2 1 sun.spe", "r");
   struct csv_data *spectrum = read_spe (fp);
   sqlimit_main (spectrum, VERTICAL);
-#endif
   free (spectrum->wavelengths);
   free (spectrum->intensities);
   free (spectrum);
+#endif
   exit (EXIT_SUCCESS);
 }
 

@@ -71,6 +71,7 @@ draw_spec_function (GtkDrawingArea *area,
                     int             height,
                     gpointer        data)
 {
+  printf("Start drawing spectrum...");
   struct csv_data *spectrum_data = (struct csv_data *)data;
   const char *xlabel = spectrum_data->fields[0];
   const char *ylabel = spectrum_data->fields[1];
@@ -127,7 +128,7 @@ draw_eff_bg_function (GtkDrawingArea *area,
   plinit ();
   pl_cmd (PLESC_DEVINIT, cr);
   plenv (xmin, xmax, 0, ymax, 0, 0);
-  pllab ("Bandgap energy (eV)", "Max efficiency (%)", "Efficiency vs. Bandgap");
+  pllab ("Bandgap (J)", "Max efficiency (%)", "Efficiency vs. Bandgap");
   plcol0 (3);
   plline (eff_bg_data->length, eff_bg_data->bandgap, eff_bg_data->efficiency);
   plend ();
@@ -263,6 +264,7 @@ gnome_semilab_workspace_plot_spec_action (GtkWidget   *widget,
 {
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)widget;
   open_file_as_spectrum (self);
+  g_assert (self->spectrum != NULL);
   gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (self->spectrum_plot), draw_spec_function, self->spectrum, NULL);
 }
 
@@ -310,8 +312,11 @@ gnome_semilab_workspace_dispose (GObject *object)
   GnomeSemilabWorkspace *self = (GnomeSemilabWorkspace *)object;
 
   g_clear_pointer (&self->ws_type, g_free);
-  free (self->spectrum->wavelengths);
-  free (self->spectrum->intensities);
+  if (self->spectrum)
+    {
+      free (self->spectrum->wavelengths);
+      free (self->spectrum->intensities);
+    }
   free (self->spectrum);
   free (self->eff_bg_data.bandgap);
   free (self->eff_bg_data.efficiency);
